@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - NimbusX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="auth.css?v=10" />
+</head>
+<body class="dashboard-page">
+  <div class="dash-layout">
+    <aside class="dash-sidebar">
+      <a class="brand dash-brand" href="index.html" aria-label="NimbusX home">
+        <span class="brand-mark">N</span>
+        <span>NimbusX</span>
+      </a>
+
+      <div class="project-menu">
+        <label class="project-label" for="projectToggle">Project</label>
+        <button id="projectToggle" class="project-select" type="button" aria-expanded="false">
+          <span id="activeProjectName">Test Project</span>
+          <span class="caret">▾</span>
+        </button>
+        <div id="projectDropdown" class="project-dropdown">
+          <div class="project-search">
+            <input id="projectSearchInput" type="text" placeholder="Search" />
+          </div>
+          <div class="project-default">
+            <p>Default</p>
+            <small>Default project</small>
+          </div>
+          <div class="project-list" id="projectList">
+            <button class="project-option active" data-project="Test Project" type="button">
+              Test Project <span class="chip">Default</span>
+            </button>
+            <button class="project-option" data-project="Dev Project" type="button">Dev Project</button>
+          </div>
+          <div class="project-actions">
+            <button id="createProjectButton" class="project-action primary" type="button">Create Project</button>
+            <button id="goToProjectsButton" class="project-action" type="button">Go to Projects</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="menu-section infra-menu">
+        <button id="infraToggle" class="menu-title menu-title-btn" type="button" aria-expanded="true">
+          Infrastructure <span class="menu-caret">▾</span>
+        </button>
+        <div id="infraMenuList" class="infra-menu-list open">
+          <a class="menu-item active" data-resource="vm" href="#">Virtual Machines</a>
+          <a class="menu-item" data-resource="volume" href="#">Volumes</a>
+          <a class="menu-item" data-resource="network" href="#">Networks</a>
+        </div>
+      </div>
+
+      <div class="menu-section">
+        <a class="menu-item" data-resource="object-storage" href="#">Object Storage</a>
+      </div>
+
+      <div class="menu-section admin-menu">
+        <button id="adminToggle" class="menu-title menu-title-btn" type="button" aria-expanded="true">
+          Administration <span class="menu-caret">▾</span>
+        </button>
+        <div id="adminMenuList" class="admin-menu-list open">
+          <a class="menu-item" href="billing-history.html">Billing History</a>
+          <a class="menu-item" href="teams.html">Teams</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="dash-main">
+      <header class="dash-topbar">
+        <p class="help-text">Need help? Contact Us</p>
+        <div class="profile-menu">
+          <button id="profileButton" class="profile-btn" type="button">Profile</button>
+          <div id="profileDropdown" class="profile-dropdown">
+            <p class="profile-email" id="profileEmail">user@nimbusx.com</p>
+            <a href="#" id="myProfileLink">My Account</a>
+            <a href="#">Two-Factor Authentication</a>
+            <a href="#">SSH Keys</a>
+            <a href="#">Go to Admin Panel</a>
+            <button id="logoutButton" type="button">Sign Out</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="vm-header">
+        <h1 id="resourceTitle">Virtual Machines</h1>
+        <div class="region-wrap">
+          <label for="regionSelect">Region</label>
+          <select id="regionSelect" class="region-select">
+            <option>All Regions</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="tabs">
+        <button class="tab active" type="button">Virtual Machines</button>
+        <button class="tab" type="button">Images</button>
+      </section>
+
+      <section class="empty-state">
+        <div class="empty-icon">N</div>
+        <h2 id="resourceEmptyTitle">No Virtual Machines</h2>
+        <p id="welcomeText">Create your first Virtual Machine to get started.</p>
+        <button id="createVmButton" class="btn create-btn" type="button">Create VM</button>
+      </section>
+
+      <section id="vmListSection" class="vm-list-section" hidden>
+        <div class="projects-row head vm-table-head">
+          <span>Name</span>
+          <span>Status</span>
+          <span>Region</span>
+        </div>
+        <div id="vmListBody"></div>
+      </section>
+
+      <footer class="dash-footer">
+        <a href="#">Terms of Use</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">API Docs</a>
+        <a href="#">Tech Docs</a>
+        <a href="#">Contact Us</a>
+      </footer>
+    </main>
+  </div>
+
+  <script src="projects-sync.js?v=5"></script>
+  <script>
+    const user = localStorage.getItem("nimbusUser");
+    const profileButton = document.getElementById("profileButton");
+    const profileDropdown = document.getElementById("profileDropdown");
+    const logoutButton = document.getElementById("logoutButton");
+    const myProfileLink = document.getElementById("myProfileLink");
+    const profileEmail = document.getElementById("profileEmail");
+    const projectToggle = document.getElementById("projectToggle");
+    const projectDropdown = document.getElementById("projectDropdown");
+    const activeProjectName = document.getElementById("activeProjectName");
+    const projectSearchInput = document.getElementById("projectSearchInput");
+    const projectList = document.getElementById("projectList");
+    const createProjectButton = document.getElementById("createProjectButton");
+    const goToProjectsButton = document.getElementById("goToProjectsButton");
+    const createVmButton = document.getElementById("createVmButton");
+    const vmListSection = document.getElementById("vmListSection");
+    const vmListBody = document.getElementById("vmListBody");
+    const emptyState = document.querySelector(".empty-state");
+    const resourceTitle = document.getElementById("resourceTitle");
+    const resourceEmptyTitle = document.getElementById("resourceEmptyTitle");
+    const resourceMenuItems = document.querySelectorAll("[data-resource]");
+    const emptyMessage = document.getElementById("welcomeText");
+    const infraToggle = document.getElementById("infraToggle");
+    const infraMenuList = document.getElementById("infraMenuList");
+    const adminToggle = document.getElementById("adminToggle");
+    const adminMenuList = document.getElementById("adminMenuList");
+    let currentState = { projects: [], activeProjectId: null };
+    let currentVms = [];
+    let currentResourceType = "vm";
+    const resourceLabels = {
+      vm: "Virtual Machines",
+      volume: "Volumes",
+      network: "Networks",
+      "object-storage": "Object Storage",
+    };
+
+    function getUserEmail() {
+      try {
+        const raw = localStorage.getItem("nimbusUser");
+        if (!raw) return "";
+        const parsed = JSON.parse(raw);
+        return (parsed.email || "").trim().toLowerCase();
+      } catch (_error) {
+        return "";
+      }
+    }
+
+    async function apiGet(url) {
+      const response = await fetch(url);
+      return response.json();
+    }
+
+    async function apiPost(url, payload) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      return response.json();
+    }
+
+    function renderVms() {
+      if (!vmListBody || !vmListSection || !emptyState) return;
+      if (!currentVms.length) {
+        vmListBody.innerHTML = "";
+        vmListSection.hidden = true;
+        emptyState.hidden = false;
+        return;
+      }
+
+      emptyState.hidden = true;
+      vmListSection.hidden = false;
+      vmListBody.innerHTML = currentVms
+        .map(
+          (vm) => `<div class="projects-row vm-row">
+            <span>${vm.name}</span>
+            <span><span class="vm-status">${vm.status}</span></span>
+            <span>${vm.region}</span>
+          </div>`
+        )
+        .join("");
+    }
+
+    async function refreshVms() {
+      const email = getUserEmail();
+      if (!email || !currentState.activeProjectId) return;
+      const result = await apiGet(
+        `/api/resources?email=${encodeURIComponent(email)}&projectId=${encodeURIComponent(
+          currentState.activeProjectId
+        )}&type=${encodeURIComponent(currentResourceType)}`
+      );
+      if (!result.ok) {
+        currentVms = [];
+        renderVms();
+        return;
+      }
+      currentVms = result.resources || [];
+      renderVms();
+    }
+
+    function updateResourceText() {
+      const label = resourceLabels[currentResourceType] || "Resources";
+      const singular = label === "Virtual Machines" ? "Virtual Machine" : label.endsWith("s") ? label.slice(0, -1) : label;
+      if (resourceTitle) resourceTitle.textContent = label;
+      if (resourceEmptyTitle) resourceEmptyTitle.textContent = `No ${label}`;
+      if (createVmButton) createVmButton.textContent = `Create ${singular === "Virtual Machine" ? "VM" : singular}`;
+      if (emptyMessage) emptyMessage.textContent = `Create your first ${singular} to get started.`;
+    }
+
+    async function refreshProjects(query = "") {
+      const response = await window.NimbusProjects.loadProjectsState();
+      if (!response.ok) return;
+      currentState = response.state;
+      window.NimbusProjects.renderProjectList({
+        state: currentState,
+        listElement: projectList,
+        activeNameElement: activeProjectName,
+        query,
+      });
+      await refreshVms();
+    }
+
+    if (profileButton && profileDropdown) {
+      profileButton.addEventListener("click", () => profileDropdown.classList.toggle("open"));
+    }
+
+    if (infraToggle && infraMenuList) {
+      infraToggle.addEventListener("click", () => {
+        const open = infraMenuList.classList.toggle("open");
+        infraToggle.setAttribute("aria-expanded", String(open));
+      });
+    }
+
+    if (adminToggle && adminMenuList) {
+      adminToggle.addEventListener("click", () => {
+        const open = adminMenuList.classList.toggle("open");
+        adminToggle.setAttribute("aria-expanded", String(open));
+      });
+    }
+
+    document.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!target.closest(".profile-menu")) profileDropdown.classList.remove("open");
+      if (!target.closest(".project-menu") && projectDropdown) {
+        projectDropdown.classList.remove("open");
+        projectToggle.setAttribute("aria-expanded", "false");
+      }
+    });
+
+    if (projectToggle && projectDropdown) {
+      projectToggle.addEventListener("click", () => {
+        const open = projectDropdown.classList.toggle("open");
+        projectToggle.setAttribute("aria-expanded", String(open));
+      });
+    }
+
+    if (projectList) {
+      projectList.addEventListener("click", async (event) => {
+        const target = event.target.closest(".project-option");
+        if (!target) return;
+        const result = await window.NimbusProjects.setActiveProject(target.dataset.projectId);
+        if (!result.ok) return;
+        await refreshProjects(projectSearchInput ? projectSearchInput.value : "");
+        projectDropdown.classList.remove("open");
+        projectToggle.setAttribute("aria-expanded", "false");
+      });
+    }
+
+    if (projectSearchInput) {
+      projectSearchInput.addEventListener("input", () => refreshProjects(projectSearchInput.value));
+    }
+
+    if (createProjectButton) {
+      createProjectButton.addEventListener("click", async () => {
+        const name = await window.NimbusProjects.openProjectNameModal({
+          title: "Create Project",
+          placeholder: "Enter project name",
+          confirmText: "Create Project",
+        });
+        if (!name) return;
+        const result = await window.NimbusProjects.createProject(name);
+        if (!result.ok) {
+          window.alert(result.message);
+          return;
+        }
+        await refreshProjects(projectSearchInput ? projectSearchInput.value : "");
+      });
+    }
+
+    if (goToProjectsButton) {
+      goToProjectsButton.addEventListener("click", () => {
+        window.location.href = "projects.html";
+      });
+    }
+
+    if (resourceMenuItems.length) {
+      resourceMenuItems.forEach((item) => {
+        item.addEventListener("click", async (event) => {
+          event.preventDefault();
+          const type = item.dataset.resource;
+          if (!type) return;
+          currentResourceType = type;
+          resourceMenuItems.forEach((menuItem) => menuItem.classList.remove("active"));
+          item.classList.add("active");
+          updateResourceText();
+          await refreshVms();
+        });
+      });
+    }
+
+    if (createVmButton) {
+      createVmButton.addEventListener("click", async () => {
+        if (!currentState.activeProjectId) return;
+        const label = resourceLabels[currentResourceType] || "Resource";
+        const singular = label === "Virtual Machines" ? "VM" : label.endsWith("s") ? label.slice(0, -1) : label;
+        const vmName = await window.NimbusProjects.openProjectNameModal({
+          title: `Create ${singular}`,
+          placeholder: `Enter ${singular} name`,
+          confirmText: `Create ${singular}`,
+        });
+        if (!vmName) return;
+        const result = await apiPost("/api/resources/create", {
+          email: getUserEmail(),
+          projectId: Number(currentState.activeProjectId),
+          name: vmName,
+          type: currentResourceType,
+          region: "All Regions",
+        });
+        if (!result.ok) {
+          window.alert(result.message);
+          return;
+        }
+        currentVms = result.resources || [];
+        renderVms();
+      });
+    }
+
+    if (user) {
+      try {
+        const parsed = JSON.parse(user);
+        if (myProfileLink) myProfileLink.textContent = parsed.fullName ? `My Account (${parsed.fullName})` : "My Account";
+        if (profileEmail) profileEmail.textContent = parsed.email || "user@nimbusx.com";
+      } catch (_error) {}
+    }
+
+    if (logoutButton) {
+      logoutButton.addEventListener("click", () => {
+        localStorage.removeItem("nimbusUser");
+        window.location.href = "login.html";
+      });
+    }
+
+    updateResourceText();
+    refreshProjects();
+  </script>
+</body>
+</html>

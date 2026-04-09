@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - NimbusX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="auth.css?v=2" />
+</head>
+<body>
+  <section class="auth-card">
+    <a class="brand" href="index.html" aria-label="NimbusX home">
+      <span class="brand-mark">N</span>
+      <span>NimbusX</span>
+    </a>
+    <h1>Welcome back</h1>
+    <p>Log in to continue to your cloud demo dashboard.</p>
+
+    <form id="loginForm">
+      <label>
+        Work Email
+        <input id="email" type="email" placeholder="you@company.com" required />
+      </label>
+      <label>
+        Password
+        <input id="password" type="password" placeholder="Enter password" required />
+      </label>
+      <button class="btn" type="submit">Log In</button>
+    </form>
+    <p id="formMessage" class="form-message"></p>
+
+    <p class="switch">New to Nimbus? <a href="register.html">Create an account</a></p>
+    <a class="back" href="index.html">&larr; Back to website</a>
+  </section>
+  <script src="auth.js?v=2"></script>
+</body>
+</html>

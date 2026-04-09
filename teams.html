@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teams - NimbusX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="auth.css?v=10" />
+</head>
+<body class="dashboard-page">
+  <div class="dash-layout">
+    <aside class="dash-sidebar">
+      <a class="brand dash-brand" href="index.html" aria-label="NimbusX home">
+        <span class="brand-mark">N</span>
+        <span>NimbusX</span>
+      </a>
+
+      <div class="project-menu">
+        <label class="project-label" for="projectToggle">Project</label>
+        <button id="projectToggle" class="project-select" type="button" aria-expanded="false">
+          <span id="activeProjectName">Default</span>
+          <span class="caret">▾</span>
+        </button>
+        <div id="projectDropdown" class="project-dropdown">
+          <div class="project-search">
+            <input id="projectSearchInput" type="text" placeholder="Search" />
+          </div>
+          <div class="project-default">
+            <p>Default</p>
+            <small>Default project</small>
+          </div>
+          <div class="project-list" id="projectList"></div>
+          <div class="project-actions">
+            <button id="createProjectButton" class="project-action primary" type="button">Create Project</button>
+            <button id="goToProjectsButton" class="project-action" type="button">Go to Projects</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="menu-section infra-menu">
+        <button id="infraToggle" class="menu-title menu-title-btn" type="button" aria-expanded="true">
+          Infrastructure <span class="menu-caret">▾</span>
+        </button>
+        <div id="infraMenuList" class="infra-menu-list open">
+          <a class="menu-item" href="dashboard.html">Virtual Machines</a>
+          <a class="menu-item" href="dashboard.html">Volumes</a>
+          <a class="menu-item" href="dashboard.html">Networks</a>
+        </div>
+      </div>
+
+      <div class="menu-section">
+        <a class="menu-item" href="dashboard.html">Object Storage</a>
+      </div>
+
+      <div class="menu-section admin-menu">
+        <button id="adminToggle" class="menu-title menu-title-btn" type="button" aria-expanded="true">
+          Administration <span class="menu-caret">▾</span>
+        </button>
+        <div id="adminMenuList" class="admin-menu-list open">
+          <a class="menu-item" href="billing-history.html">Billing History</a>
+          <a class="menu-item active" href="teams.html">Teams</a>
+        </div>
+      </div>
+    </aside>
+
+    <main class="dash-main">
+      <header class="dash-topbar">
+        <p class="help-text">Need help? Contact Us</p>
+        <div class="profile-menu">
+          <button id="profileButton" class="profile-btn" type="button">Profile</button>
+          <div id="profileDropdown" class="profile-dropdown">
+            <p class="profile-email" id="profileEmail">user@nimbusx.com</p>
+            <a href="#" id="myProfileLink">My Account</a>
+            <a href="#">Two-Factor Authentication</a>
+            <a href="#">SSH Keys</a>
+            <a href="#">Go to Admin Panel</a>
+            <button id="logoutButton" type="button">Sign Out</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="projects-header">
+        <h1>Teams</h1>
+      </section>
+
+      <section class="projects-controls">
+        <input type="text" placeholder="Search member" />
+        <button class="btn create-btn" type="button">Invite Member</button>
+      </section>
+
+      <section class="projects-table">
+        <div class="projects-row head">
+          <span>Member</span>
+          <span>Email</span>
+          <span>Role</span>
+        </div>
+        <div class="projects-row">
+          <span>Owner</span>
+          <span>owner@nimbusx.com</span>
+          <span>Admin</span>
+        </div>
+        <div class="projects-row">
+          <span>Cloud Engineer</span>
+          <span>engineer@nimbusx.com</span>
+          <span>Editor</span>
+        </div>
+      </section>
+
+      <footer class="dash-footer">
+        <a href="#">Terms of Use</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">API Docs</a>
+        <a href="#">Tech Docs</a>
+        <a href="#">Contact Us</a>
+      </footer>
+    </main>
+  </div>
+
+  <script src="projects-sync.js?v=5"></script>
+  <script>
+    const user = localStorage.getItem("nimbusUser");
+    const profileButton = document.getElementById("profileButton");
+    const profileDropdown = document.getElementById("profileDropdown");
+    const logoutButton = document.getElementById("logoutButton");
+    const myProfileLink = document.getElementById("myProfileLink");
+    const profileEmail = document.getElementById("profileEmail");
+    const projectToggle = document.getElementById("projectToggle");
+    const projectDropdown = document.getElementById("projectDropdown");
+    const activeProjectName = document.getElementById("activeProjectName");
+    const projectSearchInput = document.getElementById("projectSearchInput");
+    const projectList = document.getElementById("projectList");
+    const createProjectButton = document.getElementById("createProjectButton");
+    const goToProjectsButton = document.getElementById("goToProjectsButton");
+    const infraToggle = document.getElementById("infraToggle");
+    const infraMenuList = document.getElementById("infraMenuList");
+    const adminToggle = document.getElementById("adminToggle");
+    const adminMenuList = document.getElementById("adminMenuList");
+
+    async function refreshProjects(query = "") {
+      const response = await window.NimbusProjects.loadProjectsState();
+      if (!response.ok) return;
+      window.NimbusProjects.renderProjectList({
+        state: response.state,
+        listElement: projectList,
+        activeNameElement: activeProjectName,
+        query,
+      });
+    }
+
+    if (profileButton && profileDropdown) {
+      profileButton.addEventListener("click", () => profileDropdown.classList.toggle("open"));
+    }
+
+    if (projectToggle && projectDropdown) {
+      projectToggle.addEventListener("click", () => {
+        const open = projectDropdown.classList.toggle("open");
+        projectToggle.setAttribute("aria-expanded", String(open));
+      });
+    }
+
+    if (infraToggle && infraMenuList) {
+      infraToggle.addEventListener("click", () => {
+        const open = infraMenuList.classList.toggle("open");
+        infraToggle.setAttribute("aria-expanded", String(open));
+      });
+    }
+
+    if (adminToggle && adminMenuList) {
+      adminToggle.addEventListener("click", () => {
+        const open = adminMenuList.classList.toggle("open");
+        adminToggle.setAttribute("aria-expanded", String(open));
+      });
+    }
+
+    document.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!target.closest(".profile-menu")) profileDropdown.classList.remove("open");
+      if (!target.closest(".project-menu") && projectDropdown) {
+        projectDropdown.classList.remove("open");
+        projectToggle.setAttribute("aria-expanded", "false");
+      }
+    });
+
+    if (projectList) {
+      projectList.addEventListener("click", async (event) => {
+        const target = event.target.closest(".project-option");
+        if (!target) return;
+        const result = await window.NimbusProjects.setActiveProject(target.dataset.projectId);
+        if (!result.ok) return;
+        await refreshProjects(projectSearchInput ? projectSearchInput.value : "");
+      });
+    }
+
+    if (projectSearchInput) {
+      projectSearchInput.addEventListener("input", () => refreshProjects(projectSearchInput.value));
+    }
+
+    if (createProjectButton) {
+      createProjectButton.addEventListener("click", async () => {
+        const name = await window.NimbusProjects.openProjectNameModal({
+          title: "Create Project",
+          placeholder: "Enter project name",
+          confirmText: "Create Project",
+        });
+        if (!name) return;
+        const result = await window.NimbusProjects.createProject(name);
+        if (!result.ok) {
+          window.alert(result.message);
+          return;
+        }
+        await refreshProjects(projectSearchInput ? projectSearchInput.value : "");
+      });
+    }
+
+    if (goToProjectsButton) {
+      goToProjectsButton.addEventListener("click", () => {
+        window.location.href = "projects.html";
+      });
+    }
+
+    if (user) {
+      try {
+        const parsed = JSON.parse(user);
+        if (myProfileLink) myProfileLink.textContent = parsed.fullName ? `My Account (${parsed.fullName})` : "My Account";
+        if (profileEmail) profileEmail.textContent = parsed.email || "user@nimbusx.com";
+      } catch (_error) {}
+    }
+
+    if (logoutButton) {
+      logoutButton.addEventListener("click", () => {
+        localStorage.removeItem("nimbusUser");
+        window.location.href = "login.html";
+      });
+    }
+
+    refreshProjects();
+  </script>
+</body>
+</html>

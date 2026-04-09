@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register - NimbusX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="auth.css?v=2" />
+</head>
+<body>
+  <section class="auth-card">
+    <a class="brand" href="index.html" aria-label="NimbusX home">
+      <span class="brand-mark">N</span>
+      <span>NimbusX</span>
+    </a>
+    <h1>Create your account</h1>
+    <p>Register to request a personalized cloud demo.</p>
+
+    <form id="registerForm">
+      <label>
+        Full Name
+        <input id="fullName" type="text" placeholder="John Doe" required />
+      </label>
+      <label>
+        Work Email
+        <input id="email" type="email" placeholder="you@company.com" required />
+      </label>
+      <label>
+        Password
+        <input id="password" type="password" placeholder="Create password" minlength="8" required />
+      </label>
+      <button class="btn" type="submit">Create Account</button>
+    </form>
+    <p id="formMessage" class="form-message"></p>
+
+    <p class="switch">Already have an account? <a href="login.html">Log in</a></p>
+    <a class="back" href="index.html">&larr; Back to website</a>
+  </section>
+  <script src="auth.js?v=2"></script>
+</body>
+</html>
