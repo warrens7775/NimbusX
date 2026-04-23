@@ -6,6 +6,9 @@
   --primary-strong: #2d71f6;
   --accent: #20d3a6;
   --shadow: 0 18px 45px rgba(8, 16, 32, 0.35);
+  --glow: 0 0 40px rgba(79, 140, 255, 0.3);
+  --card-bg: rgba(15, 31, 56, 0.72);
+  --card-border: rgba(84, 116, 172, 0.36);
 }
 
 * {
@@ -22,6 +25,38 @@ body {
   background: radial-gradient(circle at 20% 5%, #132a4d 0%, var(--bg) 38%, #050b16 100%);
   color: var(--text);
   line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Animated background gradient */
+body::before {
+  content: "";
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(79, 140, 255, 0.08), transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(32, 211, 166, 0.06), transparent 40%);
+  animation: bgPulse 15s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes bgPulse {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.5; }
+  50% { transform: scale(1.1) rotate(5deg); opacity: 0.8; }
+}
+
+/* Fade-in animation on scroll */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeInUp 0.8s ease-out forwards;
 }
 
 a {
@@ -147,6 +182,31 @@ a {
 
 .hero {
   padding: 5.4rem 0 3.7rem;
+  position: relative;
+}
+
+/* Floating particles effect */
+.hero::after {
+  content: "";
+  position: absolute;
+  top: 20%;
+  right: 10%;
+  width: 8px;
+  height: 8px;
+  background: var(--primary);
+  border-radius: 50%;
+  box-shadow:
+    0 0 20px var(--primary),
+    40px -60px 0 2px rgba(79, 140, 255, 0.4),
+    -80px 100px 0 -1px rgba(32, 211, 166, 0.5),
+    120px 40px 0 1px rgba(79, 140, 255, 0.3);
+  animation: float 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
 }
 
 .hero-grid {
@@ -154,6 +214,14 @@ a {
   grid-template-columns: 1.2fr 0.9fr;
   gap: 2rem;
   align-items: center;
+}
+
+.hero-content {
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.hero-panel {
+  animation: fadeInUp 0.8s ease-out 0.2s backwards;
 }
 
 .kicker {
@@ -219,7 +287,31 @@ h1 {
   border: 1px solid rgba(102, 131, 181, 0.45);
   border-radius: 20px;
   padding: 1.4rem;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow), var(--glow);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shine effect on hero panel */
+.hero-panel::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 70%
+  );
+  animation: shine 8s linear infinite;
+}
+
+@keyframes shine {
+  0% { transform: translateX(-50%) translateY(-50%) rotate(0deg); }
+  100% { transform: translateX(50%) translateY(50%) rotate(0deg); }
 }
 
 .panel-title {
@@ -325,22 +417,49 @@ section {
   border: 1px solid rgba(84, 116, 172, 0.36);
   border-radius: 16px;
   padding: 1.2rem;
+  position: relative;
+  overflow: hidden;
 }
 
 .card,
 .segment-card,
 .why-card,
 .price-card {
-  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+  transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), border-color 300ms ease, box-shadow 300ms ease;
 }
 
 .card:hover,
 .segment-card:hover,
 .why-card:hover,
 .price-card:hover {
-  transform: translateY(-5px);
-  border-color: rgba(121, 158, 225, 0.72);
-  box-shadow: 0 16px 34px rgba(7, 16, 32, 0.32);
+  transform: translateY(-8px) scale(1.02);
+  border-color: rgba(121, 158, 225, 0.9);
+  box-shadow: 0 20px 40px rgba(7, 16, 32, 0.5), var(--glow);
+}
+
+/* Card glow effect on hover */
+.card::after,
+.segment-card::after,
+.why-card::after,
+.price-card::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: radial-gradient(circle, rgba(79, 140, 255, 0.15), transparent 70%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 400ms ease, height 400ms ease;
+}
+
+.card:hover::after,
+.segment-card:hover::after,
+.why-card:hover::after,
+.price-card:hover::after {
+  width: 300px;
+  height: 300px;
 }
 
 .card p,
