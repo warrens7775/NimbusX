@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact NimbusX | Cloud Consultation</title>
+  <meta name="description" content="Contact NimbusX for compute, object storage, VPC, VPN, backup, and migration planning." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="site.css?v=7" />
+</head>
+<body>
+  <div class="scroll-progress" aria-hidden="true"></div>
+  <header class="site-header" id="top">
+    <div class="container nav-wrap">
+      <a class="brand" href="index.html"><span class="brand-mark">N</span><span>NimbusX</span></a>
+      <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation" aria-expanded="false"><span></span><span></span><span></span></button>
+      <nav class="site-nav" id="siteNav">
+        <a href="compute.html">Compute</a>
+        <a href="storage.html">Storage</a>
+        <a href="networking.html">Networking</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="contact.html">Contact</a>
+      </nav>
+      <a class="btn btn-sm btn-secondary hide-mobile" href="register.html">Client Signup</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <p class="kicker">Contact</p>
+        <h1>Plan your NimbusX cloud environment.</h1>
+        <p>Tell us what you want to host and the NimbusX team will recommend compute, storage, VPC, VPN, backup, and migration next steps.</p>
+      </div>
+    </section>
+
+    <section class="cta" id="contact">
+      <div class="container cta-wrap">
+        <div>
+          <p class="kicker">Consultation Request</p>
+          <h2>Share your workload details.</h2>
+          <p>Include expected traffic, data size, region preference, migration deadline, and current cloud provider if any.</p>
+          <p class="contact-line">Cloud migration planning | Compute sizing | VPC and VPN architecture</p>
+        </div>
+        <form class="contact-form">
+          <label>Work Email<input name="email" type="email" placeholder="you@company.com" required /></label>
+          <label>Company Name<input name="company" type="text" placeholder="Your Company" required /></label>
+          <label>Phone<input name="phone" type="tel" placeholder="+1 555 0100" /></label>
+          <label>
+            Primary Need
+            <select name="service">
+              <option>Compute instances</option>
+              <option>S3-compatible object storage</option>
+              <option>VPC, VPN, and networking</option>
+              <option>Backup and disaster recovery</option>
+              <option>Full cloud migration</option>
+            </select>
+          </label>
+          <label>
+            Workload Size
+            <select name="workload">
+              <option>Small production app</option>
+              <option>Business platform</option>
+              <option>Data-heavy storage workload</option>
+              <option>Enterprise migration</option>
+            </select>
+          </label>
+          <label>
+            Monthly Budget
+            <select name="budget">
+              <option>Under $500</option>
+              <option>$500 - $2,000</option>
+              <option>$2,000 - $10,000</option>
+              <option>$10,000+</option>
+            </select>
+          </label>
+          <label>Message<textarea name="message" rows="4" placeholder="Tell us what you want to host"></textarea></label>
+          <button type="submit" class="btn btn-primary">Request Consultation</button>
+          <p class="form-status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-wrap">
+      <p>&copy; 2026 NimbusX. All rights reserved.</p>
+      <a href="#top">Back to top</a>
+    </div>
+  </footer>
+  <button class="back-to-top" type="button" aria-label="Back to top">↑</button>
+  <script src="script.js?v=6"></script>
+</body>
+</html>

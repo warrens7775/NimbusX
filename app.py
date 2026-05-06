@@ -76,6 +76,21 @@ def init_db():
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS leads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            company TEXT NOT NULL,
+            phone TEXT,
+            service TEXT,
+            workload TEXT,
+            budget TEXT,
+            message TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
     conn.commit()
     conn.close()
 
@@ -303,6 +318,7 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             "/api/projects/edit": self.handle_project_edit,
             "/api/vms/create": self.handle_vm_create,
             "/api/resources/create": self.handle_resource_create,
+            "/api/leads": self.handle_lead_create,
         }
         handler = routes.get(self.path)
         if not handler:
@@ -609,6 +625,31 @@ class NimbusHandler(SimpleHTTPRequestHandler):
         resources = serialize_resources(conn, user["id"], int(project_id), resource_type)
         conn.close()
         self._send_json({"ok": True, "resources": resources})
+
+    def handle_lead_create(self, data: dict):
+        email = (data.get("email") or "").strip().lower()
+        company = (data.get("company") or "").strip()
+        phone = (data.get("phone") or "").strip()
+        service = (data.get("service") or "").strip()
+        workload = (data.get("workload") or "").strip()
+        budget = (data.get("budget") or "").strip()
+        message = (data.get("message") or "").strip()
+
+        if not email or not company:
+            self._send_json({"ok": False, "message": "Work email and company are required"}, 400)
+            return
+
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute(
+            """
+            INSERT INTO leads (email, company, phone, service, workload, budget, message)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (email, company, phone, service, workload, budget, message),
+        )
+        conn.commit()
+        conn.close()
+        self._send_json({"ok": True, "message": "Consultation request saved"})
 
 
 if __name__ == "__main__":

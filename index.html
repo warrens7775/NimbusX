@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NimbusX - Cloud Infrastructure Platform</title>
+  <title>NimbusX Cloud Platform | Compute, Storage, VPC, VPN, Backup</title>
   <meta
     name="description"
-    content="Nimbus IaaS platform for Cloud VM, object storage, networking, VPN, and backup utility services with enterprise-grade performance."
+    content="NimbusX cloud infrastructure platform for virtual machines, S3-compatible object storage, VPC networking, VPN access, backup, and managed operations."
   />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,9 +14,10 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="styles.css?v=5" />
+  <link rel="stylesheet" href="site.css?v=7" />
 </head>
 <body>
+  <div class="scroll-progress" aria-hidden="true"></div>
   <header class="site-header" id="top">
     <div class="container nav-wrap">
       <a class="brand" href="#top" aria-label="NimbusX home">
@@ -31,14 +32,15 @@
       </button>
 
       <nav class="site-nav" id="siteNav">
-        <a href="#products">Products</a>
-        <a href="#performance">Performance</a>
+        <a href="compute.html">Compute</a>
+        <a href="storage.html">Storage</a>
+        <a href="networking.html">Networking</a>
+        <a href="pricing.html">Pricing</a>
         <a href="#support">Support</a>
-        <a href="#pricing">Pricing</a>
-        <a href="#contact">Contact</a>
+        <a href="contact.html">Contact</a>
       </nav>
 
-      <a class="btn btn-sm btn-secondary hide-mobile" href="register.html">Request Demo</a>
+      <a class="btn btn-sm btn-secondary hide-mobile" href="contact.html">Request Demo</a>
     </div>
   </header>
 
@@ -46,42 +48,65 @@
     <section class="hero">
       <div class="container hero-grid">
         <div class="hero-content">
-          <p class="kicker">India Performance Cloud</p>
-          <h1>Reliable cloud infrastructure for high-growth teams.</h1>
+          <p class="kicker">Cloud Infrastructure For Growing Businesses</p>
+          <h1>NimbusX Cloud Platform</h1>
           <p class="hero-copy">
-            Production-ready infrastructure with clear pricing and low operational complexity.
-            Launch VM, object storage, networking, VPN, and backup resources in under 60 seconds.
+            Deploy virtual machines, S3-compatible storage, private networks, VPN gateways,
+            and backups from one managed cloud platform built for predictable operations.
           </p>
           <div class="hero-actions">
-            <a class="btn btn-primary" href="#pricing">Deploy in 60 Seconds</a>
-            <a class="btn btn-ghost" href="#products">Interactive Demo</a>
+            <a class="btn btn-primary" href="#contact">Request Consultation</a>
+            <a class="btn btn-ghost" href="#products">View Services</a>
           </div>
           <ul class="hero-stats">
             <li><strong>99.95%</strong><span>Uptime SLA</span></li>
-            <li><strong>3</strong><span>Live Regions</span></li>
-            <li><strong>60%</strong><span>Lower Cost vs AWS</span></li>
+            <li><strong>24/7</strong><span>Cloud Support</span></li>
+            <li><strong>One</strong><span>Unified Console</span></li>
           </ul>
         </div>
 
-        <div class="hero-panel">
-          <p class="panel-title">Nimbus Console</p>
-          <div class="metric-row">
-            <span>Virtual Machine</span>
-            <strong class="healthy">Starts at $12/month</strong>
+        <div class="hero-panel ui-console" data-tilt>
+          <div class="console-toolbar">
+            <span></span>
+            <span></span>
+            <span></span>
+            <strong>nimbusx-prod</strong>
           </div>
-          <div class="metric-row">
-            <span>Object Storage</span>
-            <strong>From $0.02 per GB</strong>
+          <div class="console-command">
+            <span>$</span>
+            <code>nimbus deploy vm api-prod --vpc private --backup daily</code>
           </div>
-          <div class="metric-row">
-            <span>Active VMs</span>
-            <strong>24</strong>
+          <div class="console-status">
+            <article>
+              <span>Compute</span>
+              <strong>28 VMs</strong>
+              <i style="--fill: 82%"></i>
+            </article>
+            <article>
+              <span>Object Storage</span>
+              <strong>12.4 TB</strong>
+              <i style="--fill: 64%"></i>
+            </article>
+            <article>
+              <span>VPC Traffic</span>
+              <strong>8.7 Gbps</strong>
+              <i style="--fill: 76%"></i>
+            </article>
           </div>
-          <div class="metric-row">
-            <span>Storage Used</span>
-            <strong>8.2 TB</strong>
+          <div class="infra-map" aria-label="NimbusX infrastructure map">
+            <span class="map-node map-edge">LB</span>
+            <span class="map-node map-compute">VM</span>
+            <span class="map-node map-vpc">VPC</span>
+            <span class="map-node map-store">S3</span>
+            <span class="map-link link-a"></span>
+            <span class="map-link link-b"></span>
+            <span class="map-link link-c"></span>
           </div>
-          <p class="panel-foot">Interactive preview of VM and storage deployment.</p>
+          <div class="console-feed">
+            <div><span></span> Firewall rules synced</div>
+            <div><span></span> Snapshot policy attached</div>
+            <div><span></span> VPN route propagated</div>
+          </div>
         </div>
       </div>
     </section>
@@ -93,6 +118,20 @@
           <span>vs AWS <strong>60%</strong></span>
           <span>vs GCP <strong>55%</strong></span>
           <span>vs Azure <strong>50%</strong></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="deploy-flow">
+      <div class="container deploy-shell">
+        <div>
+          <p class="kicker">Cloud Launch Flow</p>
+          <h2>From plan to protected workload in one guided console.</h2>
+        </div>
+        <div class="flow-steps">
+          <article data-tilt><span>01</span><strong>Choose workload</strong><p>VM, storage, VPC, VPN, or backup policy.</p></article>
+          <article data-tilt><span>02</span><strong>Apply guardrails</strong><p>Networking, firewall, access, snapshots, and spend controls.</p></article>
+          <article data-tilt><span>03</span><strong>Launch live</strong><p>Provision resources with status, logs, and usage visibility.</p></article>
         </div>
       </div>
     </section>
@@ -317,6 +356,81 @@
           </article>
         </div>
         <p class="panel-foot">Final invoice is generated from real usage metrics across compute, storage, networking, VPN, and backup services.</p>
+
+        <div class="calculator" aria-label="NimbusX monthly pricing calculator">
+          <div>
+            <p class="kicker">Pricing Calculator</p>
+            <h3>Estimate a monthly cloud bill.</h3>
+            <p>Adjust common infrastructure inputs to model a starter NimbusX environment.</p>
+          </div>
+          <div class="calculator-fields">
+            <label>
+              vCPU count
+              <input id="calcVcpu" type="number" min="1" value="8" />
+            </label>
+            <label>
+              Memory GB
+              <input id="calcMemory" type="number" min="1" value="32" />
+            </label>
+            <label>
+              Object storage GB
+              <input id="calcStorage" type="number" min="0" value="1000" />
+            </label>
+            <label>
+              Bandwidth GB
+              <input id="calcBandwidth" type="number" min="0" value="500" />
+            </label>
+            <label>
+              Backup GB
+              <input id="calcBackups" type="number" min="0" value="500" />
+            </label>
+            <label>
+              VPN gateways
+              <input id="calcVpn" type="number" min="0" value="1" />
+            </label>
+          </div>
+          <div class="calculator-total">
+            <span>Estimated monthly total</span>
+            <strong data-total>$0</strong>
+            <div class="calculator-breakdown" data-breakdown></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="comparison">
+      <div class="container">
+        <div class="section-head">
+          <p class="kicker">Comparison</p>
+          <h2>Cloud services without avoidable platform sprawl.</h2>
+        </div>
+        <div class="comparison-table">
+          <div class="comparison-row comparison-head">
+            <span>Capability</span>
+            <span>NimbusX</span>
+            <span>Typical Hyperscaler Setup</span>
+          </div>
+          <div class="comparison-row">
+            <span>Compute, storage, VPC, VPN, backup</span>
+            <span>Unified cloud operations flow</span>
+            <span>Multiple service consoles and policies</span>
+          </div>
+          <div class="comparison-row">
+            <span>Support</span>
+            <span>Direct cloud infrastructure guidance</span>
+            <span>Tiered support queue and account routing</span>
+          </div>
+          <div class="comparison-row">
+            <span>Cost planning</span>
+            <span>Usage review and workload sizing</span>
+            <span>Complex calculators and billing exports</span>
+          </div>
+          <div class="comparison-row">
+            <span>Migration</span>
+            <span>Architecture and onboarding assistance</span>
+            <span>Usually handled by customer or partners</span>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -343,25 +457,108 @@
       </div>
     </section>
 
+    <section class="security-detail">
+      <div class="container security-detail-grid">
+        <div>
+          <p class="kicker">Security And Compliance Readiness</p>
+          <h2>Controls your customers and auditors expect.</h2>
+          <p>
+            NimbusX gives cloud teams a practical foundation for regulated and business-critical workloads:
+            isolation, encryption, access control, backup policy, and operational visibility.
+          </p>
+        </div>
+        <div class="assurance-grid">
+          <article><h3>Private Networking</h3><p>VPC boundaries, subnet separation, firewall rules, and VPN access for private systems.</p></article>
+          <article><h3>Data Protection</h3><p>Storage encryption, snapshot workflows, backup retention, and restore planning.</p></article>
+          <article><h3>Access Governance</h3><p>Project-level access patterns for teams, customers, and internal environments.</p></article>
+          <article><h3>Operational Reviews</h3><p>Architecture checks, usage reviews, and migration planning for production teams.</p></article>
+        </div>
+      </div>
+    </section>
+
     <section class="cta" id="contact">
       <div class="container cta-wrap">
         <div>
           <p class="kicker">Ready To Migrate?</p>
           <h2>Deploy your first workload in under 60 seconds.</h2>
           <p>Talk to cloud experts and get migration support tailored to your architecture.</p>
-          <p class="contact-line">+1 (800) 555-1488 | New York, USA</p>
+          <p class="contact-line">Cloud migration planning | Compute sizing | VPC and VPN architecture</p>
         </div>
         <form class="contact-form">
           <label>
             Work Email
-            <input type="email" placeholder="you@company.com" required />
+            <input name="email" type="email" placeholder="you@company.com" required />
           </label>
           <label>
             Company Name
-            <input type="text" placeholder="Your Company" required />
+            <input name="company" type="text" placeholder="Your Company" required />
+          </label>
+          <label>
+            Phone
+            <input name="phone" type="tel" placeholder="+1 555 0100" />
+          </label>
+          <label>
+            Primary Need
+            <select name="service">
+              <option>Compute instances</option>
+              <option>S3-compatible object storage</option>
+              <option>VPC, VPN, and networking</option>
+              <option>Backup and disaster recovery</option>
+              <option>Full cloud migration</option>
+            </select>
+          </label>
+          <label>
+            Workload Size
+            <select name="workload">
+              <option>Small production app</option>
+              <option>Business platform</option>
+              <option>Data-heavy storage workload</option>
+              <option>Enterprise migration</option>
+            </select>
+          </label>
+          <label>
+            Monthly Budget
+            <select name="budget">
+              <option>Under $500</option>
+              <option>$500 - $2,000</option>
+              <option>$2,000 - $10,000</option>
+              <option>$10,000+</option>
+            </select>
+          </label>
+          <label>
+            Message
+            <textarea name="message" rows="4" placeholder="Tell us what you want to host"></textarea>
           </label>
           <button type="submit" class="btn btn-primary">Request Consultation</button>
+          <p class="form-status" role="status" aria-live="polite"></p>
         </form>
+      </div>
+    </section>
+
+    <section class="faq">
+      <div class="container">
+        <div class="section-head">
+          <p class="kicker">FAQ</p>
+          <h2>Common cloud platform questions.</h2>
+        </div>
+        <div class="faq-grid">
+          <article>
+            <h3>Can NimbusX replace AWS-style infrastructure?</h3>
+            <p>For many VM, object storage, VPC, VPN, and backup workloads, yes. Complex managed services should be reviewed during migration planning.</p>
+          </article>
+          <article>
+            <h3>Is object storage S3-compatible?</h3>
+            <p>The storage service is designed for S3-compatible workflows, SDKs, backup tools, media assets, and log archives.</p>
+          </article>
+          <article>
+            <h3>Do you help with migration?</h3>
+            <p>NimbusX can support workload sizing, VPC design, data migration planning, and production launch readiness.</p>
+          </article>
+          <article>
+            <h3>Can I run private workloads?</h3>
+            <p>Yes. Use VPC isolation, private subnets, firewall policy, and VPN access for internal systems and protected apps.</p>
+          </article>
+        </div>
       </div>
     </section>
 
@@ -396,6 +593,7 @@
     </div>
   </footer>
 
-  <script src="script.js?v=5"></script>
+  <button class="back-to-top" type="button" aria-label="Back to top">↑</button>
+  <script src="script.js?v=6"></script>
 </body>
 </html>

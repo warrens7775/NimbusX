@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cloud Pricing Calculator | NimbusX</title>
+  <meta name="description" content="Estimate NimbusX monthly pricing for compute, object storage, bandwidth, backups, and VPN gateways." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="site.css?v=7" />
+</head>
+<body>
+  <div class="scroll-progress" aria-hidden="true"></div>
+  <header class="site-header" id="top">
+    <div class="container nav-wrap">
+      <a class="brand" href="index.html"><span class="brand-mark">N</span><span>NimbusX</span></a>
+      <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation" aria-expanded="false"><span></span><span></span><span></span></button>
+      <nav class="site-nav" id="siteNav">
+        <a href="compute.html">Compute</a>
+        <a href="storage.html">Storage</a>
+        <a href="networking.html">Networking</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="contact.html">Contact</a>
+      </nav>
+      <a class="btn btn-sm btn-secondary hide-mobile" href="contact.html">Request Demo</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <p class="kicker">Pricing</p>
+        <h1>Estimate cloud cost before migration.</h1>
+        <p>Model compute, memory, object storage, bandwidth, backups, and VPN gateways for a practical first monthly estimate.</p>
+      </div>
+    </section>
+
+    <section class="pricing">
+      <div class="container">
+        <div class="calculator" aria-label="NimbusX monthly pricing calculator">
+          <div>
+            <p class="kicker">Calculator</p>
+            <h3>Monthly estimate</h3>
+            <p>These values are planning estimates. Final pricing depends on actual region, usage, traffic, backup retention, and support requirements.</p>
+          </div>
+          <div class="calculator-fields">
+            <label>vCPU count<input id="calcVcpu" type="number" min="1" value="8" /></label>
+            <label>Memory GB<input id="calcMemory" type="number" min="1" value="32" /></label>
+            <label>Object storage GB<input id="calcStorage" type="number" min="0" value="1000" /></label>
+            <label>Bandwidth GB<input id="calcBandwidth" type="number" min="0" value="500" /></label>
+            <label>Backup GB<input id="calcBackups" type="number" min="0" value="500" /></label>
+            <label>VPN gateways<input id="calcVpn" type="number" min="0" value="1" /></label>
+          </div>
+          <div class="calculator-total">
+            <span>Estimated monthly total</span>
+            <strong data-total>$0</strong>
+            <div class="calculator-breakdown" data-breakdown></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page-cta">
+      <div class="container">
+        <div>
+          <h2>Want a real quote?</h2>
+          <p>Send workload details and NimbusX will size a plan around your compute, storage, VPC, VPN, and backup requirements.</p>
+        </div>
+        <a class="btn btn-primary" href="contact.html">Request Quote</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-wrap">
+      <p>&copy; 2026 NimbusX. All rights reserved.</p>
+      <a href="#top">Back to top</a>
+    </div>
+  </footer>
+  <button class="back-to-top" type="button" aria-label="Back to top">↑</button>
+  <script src="script.js?v=6"></script>
+</body>
+</html>
