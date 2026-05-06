@@ -10,9 +10,10 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="auth.css?v=10" />
+  <link rel="stylesheet" href="auth.css?v=15" />
 </head>
 <body class="dashboard-page">
+  <div class="scroll-progress" aria-hidden="true"></div>
   <div class="dash-layout">
     <aside class="dash-sidebar">
       <a class="brand dash-brand" href="index.html" aria-label="NimbusX home">
@@ -30,10 +31,6 @@
           <div class="project-search">
             <input id="projectSearchInput" type="text" placeholder="Search" />
           </div>
-          <div class="project-default">
-            <p>Default</p>
-            <small>Default project</small>
-          </div>
           <div class="project-list" id="projectList">
             <button class="project-option active" data-project="Test Project" type="button">
               Test Project <span class="chip">Default</span>
@@ -47,19 +44,75 @@
         </div>
       </div>
 
-      <div class="menu-section infra-menu">
-        <button id="infraToggle" class="menu-title menu-title-btn" type="button" aria-expanded="true">
-          Infrastructure <span class="menu-caret">▾</span>
-        </button>
-        <div id="infraMenuList" class="infra-menu-list open">
-          <a class="menu-item active" data-resource="vm" href="#">Virtual Machines</a>
-          <a class="menu-item" data-resource="volume" href="#">Volumes</a>
-          <a class="menu-item" data-resource="network" href="#">Networks</a>
-        </div>
+      <div class="menu-section">
+        <p class="menu-title">Compute</p>
+        <details class="service-dropdown" open>
+          <summary class="menu-item active" data-resource="vm">EC2</summary>
+          <a class="menu-item aws-option" href="#compute">Instances</a>
+          <a class="menu-item aws-option" href="#compute">Instance Types</a>
+          <a class="menu-item aws-option" href="#compute">Launch Templates</a>
+          <a class="menu-item aws-option" href="#compute">Spot Requests</a>
+          <a class="menu-item aws-option" href="#compute">Reserved Instances</a>
+          <a class="menu-item aws-option" href="#compute">Savings Plans</a>
+          <a class="menu-item aws-option" href="#compute">Dedicated Hosts</a>
+          <a class="menu-item aws-option" href="#compute">Capacity Reservations</a>
+          <a class="menu-item aws-option" href="#compute">AMIs</a>
+          <a class="menu-item aws-option" href="#compute">Volumes</a>
+          <a class="menu-item aws-option" href="#compute">Snapshots</a>
+          <a class="menu-item aws-option" href="#compute">Elastic IPs</a>
+          <a class="menu-item aws-option" href="#compute">Key Pairs</a>
+          <a class="menu-item aws-option" href="#compute">Security Groups</a>
+          <a class="menu-item aws-option" href="#compute">Placement Groups</a>
+          <a class="menu-item aws-option" href="#compute">Load Balancers</a>
+          <a class="menu-item aws-option" href="#compute">Target Groups</a>
+          <a class="menu-item aws-option" href="#compute">Auto Scaling Groups</a>
+        </details>
       </div>
 
       <div class="menu-section">
-        <a class="menu-item" data-resource="object-storage" href="#">Object Storage</a>
+        <p class="menu-title">S3</p>
+        <details class="service-dropdown">
+          <summary class="menu-item" data-resource="object-storage">S3</summary>
+          <a class="menu-item aws-option" href="#s3">Buckets</a>
+          <a class="menu-item aws-option" href="#s3">Access Points</a>
+          <a class="menu-item aws-option" href="#s3">Object Lambda Access Points</a>
+          <a class="menu-item aws-option" href="#s3">Multi-Region Access Points</a>
+          <a class="menu-item aws-option" href="#s3">Batch Operations</a>
+          <a class="menu-item aws-option" href="#s3">Storage Lens</a>
+          <a class="menu-item aws-option" href="#s3">Storage Lens Groups</a>
+          <a class="menu-item aws-option" href="#s3">Inventory</a>
+          <a class="menu-item aws-option" href="#s3">Replication</a>
+          <a class="menu-item aws-option" href="#s3">Block Public Access</a>
+          <a class="menu-item aws-option" href="#s3">IAM Access Analyzer for S3</a>
+        </details>
+      </div>
+
+      <div class="menu-section">
+        <p class="menu-title">VPC</p>
+        <details class="service-dropdown">
+          <summary class="menu-item" data-resource="network">VPC</summary>
+          <a class="menu-item aws-option" href="#vpc">Your VPCs</a>
+          <a class="menu-item aws-option" href="#vpc">Subnets</a>
+          <a class="menu-item aws-option" href="#vpc">Route Tables</a>
+          <a class="menu-item aws-option" href="#vpc">Internet Gateways</a>
+          <a class="menu-item aws-option" href="#vpc">Egress-Only Internet Gateways</a>
+          <a class="menu-item aws-option" href="#vpc">NAT Gateways</a>
+          <a class="menu-item aws-option" href="#vpc">Elastic IPs</a>
+          <a class="menu-item aws-option" href="#vpc">Network Interfaces</a>
+          <a class="menu-item aws-option" href="#vpc">Endpoints</a>
+          <a class="menu-item aws-option" href="#vpc">Endpoint Services</a>
+          <a class="menu-item aws-option" href="#vpc">Peering Connections</a>
+          <a class="menu-item aws-option" href="#vpc">Transit Gateways</a>
+          <a class="menu-item aws-option" href="#vpc">Transit Gateway Attachments</a>
+          <a class="menu-item aws-option" href="#vpc">Network ACLs</a>
+          <a class="menu-item aws-option" href="#vpc">Security Groups</a>
+          <a class="menu-item aws-option" href="#vpc">Prefix Lists</a>
+          <a class="menu-item aws-option" href="#vpc">DHCP Option Sets</a>
+          <a class="menu-item aws-option" href="#vpc">Customer Gateways</a>
+          <a class="menu-item aws-option" href="#vpc">Virtual Private Gateways</a>
+          <a class="menu-item aws-option" href="#vpc">Site-to-Site VPN Connections</a>
+          <a class="menu-item aws-option" href="#vpc">Client VPN Endpoints</a>
+        </details>
       </div>
 
       <div class="menu-section admin-menu">
@@ -81,16 +134,14 @@
           <div id="profileDropdown" class="profile-dropdown">
             <p class="profile-email" id="profileEmail">user@nimbusx.com</p>
             <a href="#" id="myProfileLink">My Account</a>
-            <a href="#">Two-Factor Authentication</a>
-            <a href="#">SSH Keys</a>
-            <a href="#">Go to Admin Panel</a>
+            <a href="#" id="twoFactorLink">Two-Factor Authentication</a>
             <button id="logoutButton" type="button">Sign Out</button>
           </div>
         </div>
       </header>
 
       <section class="vm-header">
-        <h1 id="resourceTitle">Virtual Machines</h1>
+        <h1 id="resourceTitle">EC2</h1>
         <div class="region-wrap">
           <label for="regionSelect">Region</label>
           <select id="regionSelect" class="region-select">
@@ -100,15 +151,15 @@
       </section>
 
       <section class="tabs">
-        <button class="tab active" type="button">Virtual Machines</button>
-        <button class="tab" type="button">Images</button>
+        <button id="primaryResourceTab" class="tab active" type="button">EC2</button>
+        <button id="secondaryResourceTab" class="tab" type="button">Images</button>
       </section>
 
       <section class="empty-state">
         <div class="empty-icon">N</div>
-        <h2 id="resourceEmptyTitle">No Virtual Machines</h2>
-        <p id="welcomeText">Create your first Virtual Machine to get started.</p>
-        <button id="createVmButton" class="btn create-btn" type="button">Create VM</button>
+        <h2 id="resourceEmptyTitle">No EC2 instances</h2>
+        <p id="welcomeText">Launch your first EC2 instance to get started.</p>
+        <button id="createVmButton" class="btn create-btn" type="button">Launch EC2</button>
       </section>
 
       <section id="vmListSection" class="vm-list-section" hidden>
@@ -130,7 +181,7 @@
     </main>
   </div>
 
-  <script src="projects-sync.js?v=5"></script>
+  <script src="projects-sync.js?v=7"></script>
   <script>
     const user = localStorage.getItem("nimbusUser");
     const profileButton = document.getElementById("profileButton");
@@ -151,6 +202,8 @@
     const emptyState = document.querySelector(".empty-state");
     const resourceTitle = document.getElementById("resourceTitle");
     const resourceEmptyTitle = document.getElementById("resourceEmptyTitle");
+    const primaryResourceTab = document.getElementById("primaryResourceTab");
+    const secondaryResourceTab = document.getElementById("secondaryResourceTab");
     const resourceMenuItems = document.querySelectorAll("[data-resource]");
     const emptyMessage = document.getElementById("welcomeText");
     const infraToggle = document.getElementById("infraToggle");
@@ -159,12 +212,49 @@
     const adminMenuList = document.getElementById("adminMenuList");
     let currentState = { projects: [], activeProjectId: null };
     let currentVms = [];
-    let currentResourceType = "vm";
-    const resourceLabels = {
-      vm: "Virtual Machines",
-      volume: "Volumes",
-      network: "Networks",
-      "object-storage": "Object Storage",
+    const resourceFromHash = {
+      "#compute": "vm",
+      "#ec2": "vm",
+      "#s3": "object-storage",
+      "#vpc": "network",
+    };
+    const hashFromResource = {
+      vm: "#compute",
+      "object-storage": "#s3",
+      network: "#vpc",
+    };
+    let currentResourceType = resourceFromHash[window.location.hash.toLowerCase()] || "vm";
+    const resourceMeta = {
+      vm: {
+        title: "EC2",
+        emptyTitle: "No EC2 instances",
+        message: "Launch your first EC2 instance to get started.",
+        createText: "Launch EC2",
+        modalTitle: "Launch EC2 instance",
+        placeholder: "Enter EC2 instance name",
+        tab: "EC2",
+        secondaryTab: "Images",
+      },
+      "object-storage": {
+        title: "S3",
+        emptyTitle: "No S3 buckets",
+        message: "Create your first S3 bucket to get started.",
+        createText: "Create S3 bucket",
+        modalTitle: "Create S3 bucket",
+        placeholder: "Enter S3 bucket name",
+        tab: "S3",
+        secondaryTab: "Buckets",
+      },
+      network: {
+        title: "VPC",
+        emptyTitle: "No VPCs",
+        message: "Create your first VPC to get started.",
+        createText: "Create VPC",
+        modalTitle: "Create VPC",
+        placeholder: "Enter VPC name",
+        tab: "VPC",
+        secondaryTab: "Subnets",
+      },
     };
 
     function getUserEmail() {
@@ -232,12 +322,22 @@
     }
 
     function updateResourceText() {
-      const label = resourceLabels[currentResourceType] || "Resources";
-      const singular = label === "Virtual Machines" ? "Virtual Machine" : label.endsWith("s") ? label.slice(0, -1) : label;
-      if (resourceTitle) resourceTitle.textContent = label;
-      if (resourceEmptyTitle) resourceEmptyTitle.textContent = `No ${label}`;
-      if (createVmButton) createVmButton.textContent = `Create ${singular === "Virtual Machine" ? "VM" : singular}`;
-      if (emptyMessage) emptyMessage.textContent = `Create your first ${singular} to get started.`;
+      const meta = resourceMeta[currentResourceType] || resourceMeta.vm;
+      if (resourceTitle) resourceTitle.textContent = meta.title;
+      if (resourceEmptyTitle) resourceEmptyTitle.textContent = meta.emptyTitle;
+      if (createVmButton) createVmButton.textContent = meta.createText;
+      if (emptyMessage) emptyMessage.textContent = meta.message;
+      if (primaryResourceTab) primaryResourceTab.textContent = meta.tab;
+      if (secondaryResourceTab) secondaryResourceTab.textContent = meta.secondaryTab;
+    }
+
+    function syncActiveResourceMenu() {
+      resourceMenuItems.forEach((menuItem) => {
+        const isActive = menuItem.dataset.resource === currentResourceType;
+        menuItem.classList.toggle("active", isActive);
+        const dropdown = menuItem.closest(".service-dropdown");
+        if (dropdown) dropdown.open = isActive;
+      });
     }
 
     async function refreshProjects(query = "") {
@@ -333,8 +433,12 @@
           const type = item.dataset.resource;
           if (!type) return;
           currentResourceType = type;
-          resourceMenuItems.forEach((menuItem) => menuItem.classList.remove("active"));
-          item.classList.add("active");
+          if (hashFromResource[type]) {
+            window.location.hash = hashFromResource[type];
+          }
+          syncActiveResourceMenu();
+          const dropdown = item.closest(".service-dropdown");
+          if (dropdown) dropdown.open = true;
           updateResourceText();
           await refreshVms();
         });
@@ -344,12 +448,11 @@
     if (createVmButton) {
       createVmButton.addEventListener("click", async () => {
         if (!currentState.activeProjectId) return;
-        const label = resourceLabels[currentResourceType] || "Resource";
-        const singular = label === "Virtual Machines" ? "VM" : label.endsWith("s") ? label.slice(0, -1) : label;
+        const meta = resourceMeta[currentResourceType] || resourceMeta.vm;
         const vmName = await window.NimbusProjects.openProjectNameModal({
-          title: `Create ${singular}`,
-          placeholder: `Enter ${singular} name`,
-          confirmText: `Create ${singular}`,
+          title: meta.modalTitle,
+          placeholder: meta.placeholder,
+          confirmText: meta.createText,
         });
         if (!vmName) return;
         const result = await apiPost("/api/resources/create", {
@@ -383,8 +486,11 @@
       });
     }
 
+    syncActiveResourceMenu();
     updateResourceText();
     refreshProjects();
   </script>
+  <button class="back-to-top" type="button" aria-label="Back to top">&uarr;</button>
+  <script src="script.js?v=6"></script>
 </body>
 </html>

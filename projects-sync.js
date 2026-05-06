@@ -23,6 +23,31 @@ async function apiPost(url, payload) {
   return response.json();
 }
 
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem("nimbusUser") || "{}");
+  } catch (_error) {
+    return {};
+  }
+}
+
+function setStoredUser(user) {
+  localStorage.setItem("nimbusUser", JSON.stringify(user));
+  const myProfileLink = document.getElementById("myProfileLink");
+  const profileEmail = document.getElementById("profileEmail");
+  if (myProfileLink) myProfileLink.textContent = user.fullName ? `My Account (${user.fullName})` : "My Account";
+  if (profileEmail) profileEmail.textContent = user.email || "user@nimbusx.com";
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 async function loadProjectsState() {
   const email = getUserEmail();
   if (!email) return { ok: false, message: "User not found. Please log in again." };
@@ -177,6 +202,251 @@ function openConfirmModal({
   });
 }
 
+function getQrCodeUrl(otpauthUri) {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(otpauthUri)}`;
+}
+
+async function openTwoFactorModal() {
+  const email = getUserEmail();
+  if (!email) {
+    window.alert("Please log in again before changing two-factor authentication.");
+    return;
+  }
+
+  const status = await apiPost("/api/2fa/status", { email });
+  if (!status.ok) {
+    window.alert(status.message || "Unable to load two-factor authentication status.");
+    return;
+  }
+
+  const overlay = document.createElement("div");
+  overlay.className = "project-modal-overlay";
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  const renderEnabled = () => {
+    overlay.innerHTML = `
+      <div class="project-modal two-factor-modal" role="dialog" aria-modal="true" aria-label="Two-factor authentication">
+        <h3>Two-Factor Authentication</h3>
+        <p class="project-modal-message">Authenticator app verification is enabled for this account.</p>
+        <label class="two-factor-field">
+          6-digit code
+          <input id="twoFactorDisableCode" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" />
+        </label>
+        <div class="project-modal-actions">
+          <button type="button" class="project-modal-btn ghost" data-action="cancel">Close</button>
+          <button type="button" class="project-modal-btn primary danger" data-action="disable">Disable 2FA</button>
+        </div>
+      </div>
+    `;
+    overlay.querySelector('[data-action="cancel"]').addEventListener("click", close);
+    overlay.querySelector('[data-action="disable"]').addEventListener("click", async () => {
+      const code = overlay.querySelector("#twoFactorDisableCode").value.trim();
+      const result = await apiPost("/api/2fa/disable", { email, code });
+      if (!result.ok) {
+        window.alert(result.message || "Unable to disable two-factor authentication.");
+        return;
+      }
+      close();
+    });
+  };
+
+  const renderSetup = async () => {
+    const setup = await apiPost("/api/2fa/setup", { email });
+    if (!setup.ok) {
+      window.alert(setup.message || "Unable to start two-factor authentication setup.");
+      close();
+      return;
+    }
+    overlay.innerHTML = `
+      <div class="project-modal two-factor-modal" role="dialog" aria-modal="true" aria-label="Set up two-factor authentication">
+        <h3>Set Up Two-Factor Authentication</h3>
+        <p class="project-modal-message">Scan the QR code with any authenticator app, or enter the setup key manually.</p>
+        <div class="two-factor-qr">
+          <img src="${getQrCodeUrl(setup.otpauthUri)}" alt="Authenticator app QR code" />
+          <code>${setup.secret}</code>
+        </div>
+        <label class="two-factor-field">
+          6-digit code
+          <input id="twoFactorVerifyCode" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" />
+        </label>
+        <div class="project-modal-actions">
+          <button type="button" class="project-modal-btn ghost" data-action="cancel">Cancel</button>
+          <button type="button" class="project-modal-btn primary" data-action="enable">Enable 2FA</button>
+        </div>
+      </div>
+    `;
+    overlay.querySelector('[data-action="cancel"]').addEventListener("click", close);
+    overlay.querySelector('[data-action="enable"]').addEventListener("click", async () => {
+      const code = overlay.querySelector("#twoFactorVerifyCode").value.trim();
+      const result = await apiPost("/api/2fa/verify", { email, code });
+      if (!result.ok) {
+        window.alert(result.message || "Unable to enable two-factor authentication.");
+        return;
+      }
+      close();
+    });
+    overlay.querySelector("#twoFactorVerifyCode").focus();
+  };
+
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) close();
+  });
+
+  if (status.enabled) {
+    renderEnabled();
+  } else {
+    await renderSetup();
+  }
+}
+
+async function openAccountModal() {
+  const email = getUserEmail();
+  if (!email) {
+    window.alert("Please log in again to view account settings.");
+    return;
+  }
+
+  const storedUser = getStoredUser();
+  const status = await apiPost("/api/account/status", { email });
+  const account = status.ok
+    ? status.account
+    : { fullName: storedUser.fullName || "", email, twoFactorEnabled: false };
+
+  const overlay = document.createElement("div");
+  overlay.className = "project-modal-overlay";
+  overlay.innerHTML = `
+    <div class="project-modal account-modal" role="dialog" aria-modal="true" aria-label="My account">
+      <div class="account-modal-head">
+        <div>
+          <h3>My Account</h3>
+          <p class="project-modal-message">${escapeHtml(account.email)}</p>
+        </div>
+        <span class="account-status">${account.twoFactorEnabled ? "2FA Enabled" : "2FA Off"}</span>
+      </div>
+
+      <section class="account-section">
+        <h4>Profile</h4>
+        <div class="account-grid">
+          <label>
+            Full name
+            <input id="accountFullName" type="text" value="${escapeHtml(account.fullName)}" />
+          </label>
+          <label>
+            Work email
+            <input id="accountEmail" type="email" value="${escapeHtml(account.email)}" disabled />
+          </label>
+        </div>
+        <button type="button" class="project-modal-btn primary" data-action="save-profile">Save Profile</button>
+      </section>
+
+      <section class="account-section">
+        <h4>Security</h4>
+        <div class="account-grid">
+          <label>
+            Current password
+            <input id="accountCurrentPassword" type="password" autocomplete="current-password" />
+          </label>
+          <label>
+            New password
+            <input id="accountNewPassword" type="password" autocomplete="new-password" />
+          </label>
+          <label>
+            Confirm new password
+            <input id="accountConfirmPassword" type="password" autocomplete="new-password" />
+          </label>
+        </div>
+        <div class="account-actions-row">
+          <button type="button" class="project-modal-btn" data-action="change-password">Change Password</button>
+          <button type="button" class="project-modal-btn" data-action="manage-2fa">Manage 2FA</button>
+        </div>
+      </section>
+
+      <section class="account-section">
+        <h4>Account Links</h4>
+        <div class="account-link-grid">
+          <a href="projects.html">Projects</a>
+          <a href="billing-history.html">Billing History</a>
+          <a href="teams.html">Teams</a>
+        </div>
+      </section>
+
+      <p id="accountMessage" class="account-message"></p>
+      <div class="project-modal-actions">
+        <button type="button" class="project-modal-btn ghost" data-action="close">Close</button>
+        <button type="button" class="project-modal-btn primary danger" data-action="sign-out">Sign Out</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  const message = overlay.querySelector("#accountMessage");
+  const setMessage = (text, isError = false) => {
+    message.textContent = text;
+    message.classList.toggle("error", isError);
+  };
+
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) close();
+  });
+  overlay.querySelector('[data-action="close"]').addEventListener("click", close);
+  overlay.querySelector('[data-action="sign-out"]').addEventListener("click", () => {
+    localStorage.removeItem("nimbusUser");
+    window.location.href = "login.html";
+  });
+  overlay.querySelector('[data-action="manage-2fa"]').addEventListener("click", async () => {
+    close();
+    await openTwoFactorModal();
+  });
+  overlay.querySelector('[data-action="save-profile"]').addEventListener("click", async () => {
+    const fullName = overlay.querySelector("#accountFullName").value.trim();
+    const result = await apiPost("/api/account/update-profile", { email, fullName });
+    if (!result.ok) {
+      setMessage(result.message || "Unable to save profile.", true);
+      return;
+    }
+    setStoredUser(result.user);
+    setMessage("Profile saved.");
+  });
+  overlay.querySelector('[data-action="change-password"]').addEventListener("click", async () => {
+    const currentPassword = overlay.querySelector("#accountCurrentPassword").value;
+    const newPassword = overlay.querySelector("#accountNewPassword").value;
+    const confirmPassword = overlay.querySelector("#accountConfirmPassword").value;
+    if (newPassword !== confirmPassword) {
+      setMessage("New passwords do not match.", true);
+      return;
+    }
+    const result = await apiPost("/api/account/change-password", { email, currentPassword, newPassword });
+    if (!result.ok) {
+      setMessage(result.message || "Unable to change password.", true);
+      return;
+    }
+    overlay.querySelector("#accountCurrentPassword").value = "";
+    overlay.querySelector("#accountNewPassword").value = "";
+    overlay.querySelector("#accountConfirmPassword").value = "";
+    setMessage("Password changed.");
+  });
+}
+
+function initTwoFactorControls() {
+  const link = document.getElementById("twoFactorLink");
+  if (!link) return;
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    openTwoFactorModal();
+  });
+}
+
+function initAccountControls() {
+  const link = document.getElementById("myProfileLink");
+  if (!link) return;
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    openAccountModal();
+  });
+}
+
 window.NimbusProjects = {
   loadProjectsState,
   renderProjectList,
@@ -188,4 +458,9 @@ window.NimbusProjects = {
   editProject,
   openProjectNameModal,
   openConfirmModal,
+  openTwoFactorModal,
+  openAccountModal,
 };
+
+initTwoFactorControls();
+initAccountControls();

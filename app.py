@@ -3,8 +3,11 @@ import os
 import sqlite3
 import hashlib
 import hmac
+import base64
+import struct
+import time
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,6 +31,10 @@ def init_db():
     user_columns = [row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()]
     if "active_project_id" not in user_columns:
         conn.execute("ALTER TABLE users ADD COLUMN active_project_id INTEGER")
+    if "twofa_secret" not in user_columns:
+        conn.execute("ALTER TABLE users ADD COLUMN twofa_secret TEXT")
+    if "twofa_enabled" not in user_columns:
+        conn.execute("ALTER TABLE users ADD COLUMN twofa_enabled INTEGER NOT NULL DEFAULT 0")
 
     conn.execute(
         """
@@ -112,6 +119,46 @@ def verify_password(password: str, stored_hash: str) -> bool:
     return hmac.compare_digest(candidate, expected)
 
 
+def generate_totp_secret() -> str:
+    return base64.b32encode(os.urandom(20)).decode("ascii").rstrip("=")
+
+
+def _decode_totp_secret(secret: str) -> bytes:
+    normalized = "".join((secret or "").strip().upper().split())
+    padding = "=" * ((8 - len(normalized) % 8) % 8)
+    return base64.b32decode(normalized + padding)
+
+
+def generate_totp_code(secret: str, timestep: int | None = None) -> str:
+    if timestep is None:
+        timestep = int(time.time() // 30)
+    key = _decode_totp_secret(secret)
+    digest = hmac.new(key, struct.pack(">Q", timestep), hashlib.sha1).digest()
+    offset = digest[-1] & 0x0F
+    value = struct.unpack(">I", digest[offset : offset + 4])[0] & 0x7FFFFFFF
+    return f"{value % 1000000:06d}"
+
+
+def verify_totp_code(secret: str, code: str) -> bool:
+    normalized_code = "".join((code or "").split())
+    if not normalized_code.isdigit() or len(normalized_code) != 6:
+        return False
+    current_step = int(time.time() // 30)
+    for drift in (-1, 0, 1):
+        if hmac.compare_digest(generate_totp_code(secret, current_step + drift), normalized_code):
+            return True
+    return False
+
+
+def build_totp_uri(email: str, secret: str) -> str:
+    issuer = "NimbusX"
+    label = f"{issuer}:{email}"
+    return (
+        f"otpauth://totp/{quote(label)}"
+        f"?secret={quote(secret)}&issuer={quote(issuer)}&algorithm=SHA1&digits=6&period=30"
+    )
+
+
 def ensure_seed_projects(conn, user_id: int):
     count = conn.execute("SELECT COUNT(*) AS c FROM projects WHERE user_id = ?", (user_id,)).fetchone()[0]
     if count > 0:
@@ -132,7 +179,11 @@ def ensure_seed_projects(conn, user_id: int):
 def get_user_by_email(conn, email: str):
     conn.row_factory = sqlite3.Row
     return conn.execute(
-        "SELECT id, full_name, email, password_hash, active_project_id FROM users WHERE email = ?",
+        """
+        SELECT id, full_name, email, password_hash, active_project_id, twofa_secret, twofa_enabled
+        FROM users
+        WHERE email = ?
+        """,
         (email,),
     ).fetchone()
 
@@ -318,6 +369,13 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             "/api/projects/edit": self.handle_project_edit,
             "/api/vms/create": self.handle_vm_create,
             "/api/resources/create": self.handle_resource_create,
+            "/api/account/status": self.handle_account_status,
+            "/api/account/update-profile": self.handle_account_update_profile,
+            "/api/account/change-password": self.handle_account_change_password,
+            "/api/2fa/status": self.handle_2fa_status,
+            "/api/2fa/setup": self.handle_2fa_setup,
+            "/api/2fa/verify": self.handle_2fa_verify,
+            "/api/2fa/disable": self.handle_2fa_disable,
             "/api/leads": self.handle_lead_create,
         }
         handler = routes.get(self.path)
@@ -369,6 +427,7 @@ class NimbusHandler(SimpleHTTPRequestHandler):
     def handle_login(self, data: dict):
         email = (data.get("email") or "").strip().lower()
         password = (data.get("password") or "").strip()
+        twofa_code = (data.get("twoFactorCode") or "").strip()
         if not email or not password:
             self._send_json({"ok": False, "message": "Email and password are required"}, 400)
             return
@@ -379,6 +438,22 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             conn.close()
             self._send_json({"ok": False, "message": "Invalid email or password"}, 401)
             return
+        if user["twofa_enabled"] == 1:
+            if not twofa_code:
+                conn.close()
+                self._send_json(
+                    {
+                        "ok": False,
+                        "requires2FA": True,
+                        "message": "Enter the 6-digit code from your authenticator app",
+                    },
+                    401,
+                )
+                return
+            if not verify_totp_code(user["twofa_secret"], twofa_code):
+                conn.close()
+                self._send_json({"ok": False, "message": "Invalid authenticator code"}, 401)
+                return
         ensure_seed_projects(conn, user["id"])
         conn.close()
         self._send_json(
@@ -388,6 +463,127 @@ class NimbusHandler(SimpleHTTPRequestHandler):
                 "user": {"id": user["id"], "fullName": user["full_name"], "email": user["email"]},
             }
         )
+
+    def handle_account_status(self, data: dict):
+        email = data.get("email")
+        conn, user, error = self._with_user(email)
+        if error:
+            self._send_json(error, 400)
+            return
+        payload = {
+            "id": user["id"],
+            "fullName": user["full_name"],
+            "email": user["email"],
+            "activeProjectId": user["active_project_id"],
+            "twoFactorEnabled": user["twofa_enabled"] == 1,
+        }
+        conn.close()
+        self._send_json({"ok": True, "account": payload})
+
+    def handle_account_update_profile(self, data: dict):
+        email = data.get("email")
+        full_name = (data.get("fullName") or "").strip()
+        if not full_name:
+            self._send_json({"ok": False, "message": "Full name is required"}, 400)
+            return
+        conn, user, error = self._with_user(email)
+        if error:
+            self._send_json(error, 400)
+            return
+        conn.execute("UPDATE users SET full_name = ? WHERE id = ?", (full_name, user["id"]))
+        conn.commit()
+        conn.close()
+        self._send_json(
+            {
+                "ok": True,
+                "message": "Account profile updated",
+                "user": {"id": user["id"], "fullName": full_name, "email": user["email"]},
+            }
+        )
+
+    def handle_account_change_password(self, data: dict):
+        email = data.get("email")
+        current_password = (data.get("currentPassword") or "").strip()
+        new_password = (data.get("newPassword") or "").strip()
+        if not current_password or not new_password:
+            self._send_json({"ok": False, "message": "Current and new password are required"}, 400)
+            return
+        if len(new_password) < 8:
+            self._send_json({"ok": False, "message": "New password must be at least 8 characters"}, 400)
+            return
+        conn, user, error = self._with_user(email)
+        if error:
+            self._send_json(error, 400)
+            return
+        if not verify_password(current_password, user["password_hash"]):
+            conn.close()
+            self._send_json({"ok": False, "message": "Current password is incorrect"}, 401)
+            return
+        conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (hash_password(new_password), user["id"]))
+        conn.commit()
+        conn.close()
+        self._send_json({"ok": True, "message": "Password changed"})
+
+    def handle_2fa_status(self, data: dict):
+        email = data.get("email")
+        conn, user, error = self._with_user(email)
+        if error:
+            self._send_json(error, 400)
+            return
+        enabled = user["twofa_enabled"] == 1
+        conn.close()
+        self._send_json({"ok": True, "enabled": enabled})
+
+    def handle_2fa_setup(self, data: dict):
+        email = data.get("email")
+        conn, user, error = self._with_user(email)
+        if error:
+            self._send_json(error, 400)
+            return
+        secret = user["twofa_secret"] if user["twofa_secret"] else generate_totp_secret()
+        conn.execute("UPDATE users SET twofa_secret = ? WHERE id = ?", (secret, user["id"]))
+        conn.commit()
+        conn.close()
+        normalized_email = (email or "").strip().lower()
+        self._send_json(
+            {
+                "ok": True,
+                "secret": secret,
+                "otpauthUri": build_totp_uri(normalized_email, secret),
+            }
+        )
+
+    def handle_2fa_verify(self, data: dict):
+        email = data.get("email")
+        code = (data.get("code") or "").strip()
+        conn, user, error = self._with_user(email)
+        if error:
+            self._send_json(error, 400)
+            return
+        if not user["twofa_secret"] or not verify_totp_code(user["twofa_secret"], code):
+            conn.close()
+            self._send_json({"ok": False, "message": "Invalid authenticator code"}, 400)
+            return
+        conn.execute("UPDATE users SET twofa_enabled = 1 WHERE id = ?", (user["id"],))
+        conn.commit()
+        conn.close()
+        self._send_json({"ok": True, "message": "Two-factor authentication enabled"})
+
+    def handle_2fa_disable(self, data: dict):
+        email = data.get("email")
+        code = (data.get("code") or "").strip()
+        conn, user, error = self._with_user(email)
+        if error:
+            self._send_json(error, 400)
+            return
+        if user["twofa_enabled"] == 1 and not verify_totp_code(user["twofa_secret"], code):
+            conn.close()
+            self._send_json({"ok": False, "message": "Invalid authenticator code"}, 400)
+            return
+        conn.execute("UPDATE users SET twofa_enabled = 0, twofa_secret = NULL WHERE id = ?", (user["id"],))
+        conn.commit()
+        conn.close()
+        self._send_json({"ok": True, "message": "Two-factor authentication disabled"})
 
     def handle_project_create(self, data: dict):
         email = data.get("email")

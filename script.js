@@ -55,7 +55,7 @@ if (canUseCursorEffect) {
   });
 
   document.querySelectorAll(
-    "a, button, input, select, textarea, .card, .price-card, .resource-card, .hero-panel, .flow-steps article"
+    "a, button, input, select, textarea, .card, .price-card, .resource-card, .hero-panel, .flow-steps article, .auth-card, .dash-sidebar, .empty-state, .projects-table, .project-modal"
   ).forEach((element) => {
     element.addEventListener("pointerenter", () => document.body.classList.add("cursor-hover"));
     element.addEventListener("pointerleave", () => document.body.classList.remove("cursor-hover"));
@@ -293,6 +293,16 @@ const revealTargets = document.querySelectorAll(
     ".detail-list article",
     ".mini-metrics div",
     ".contact-form",
+    ".auth-card",
+    ".dash-sidebar",
+    ".dash-topbar",
+    ".vm-header",
+    ".tabs",
+    ".empty-state",
+    ".vm-list-section",
+    ".projects-header",
+    ".projects-controls",
+    ".projects-table",
   ].join(",")
 );
 

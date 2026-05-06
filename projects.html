@@ -10,9 +10,10 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="auth.css?v=9" />
+  <link rel="stylesheet" href="auth.css?v=15" />
 </head>
 <body class="dashboard-page">
+  <div class="scroll-progress" aria-hidden="true"></div>
   <div class="dash-layout">
     <aside class="dash-sidebar">
       <a class="brand dash-brand" href="index.html" aria-label="NimbusX home">
@@ -30,10 +31,6 @@
           <div class="project-search">
             <input id="projectSearchInput" type="text" placeholder="Search" />
           </div>
-          <div class="project-default">
-            <p>Default</p>
-            <small>Default project</small>
-          </div>
           <div class="project-list" id="projectList"></div>
           <div class="project-actions">
             <button id="createProjectButton" class="project-action primary" type="button">Create Project</button>
@@ -42,19 +39,75 @@
         </div>
       </div>
 
-      <div class="menu-section infra-menu">
-        <button id="infraToggle" class="menu-title menu-title-btn" type="button" aria-expanded="true">
-          Infrastructure <span class="menu-caret">▾</span>
-        </button>
-        <div id="infraMenuList" class="infra-menu-list open">
-          <a class="menu-item" href="dashboard.html">Virtual Machines</a>
-          <a class="menu-item" href="#">Volumes</a>
-          <a class="menu-item" href="#">Networks</a>
-        </div>
+      <div class="menu-section">
+        <p class="menu-title">Compute</p>
+        <details class="service-dropdown">
+          <summary class="menu-item">EC2</summary>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Instances</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Instance Types</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Launch Templates</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Spot Requests</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Reserved Instances</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Savings Plans</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Dedicated Hosts</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Capacity Reservations</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">AMIs</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Volumes</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Snapshots</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Elastic IPs</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Key Pairs</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Security Groups</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Placement Groups</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Load Balancers</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Target Groups</a>
+          <a class="menu-item aws-option" href="dashboard.html#compute">Auto Scaling Groups</a>
+        </details>
       </div>
 
       <div class="menu-section">
-        <a class="menu-item" href="#">Object Storage</a>
+        <p class="menu-title">S3</p>
+        <details class="service-dropdown">
+          <summary class="menu-item">S3</summary>
+          <a class="menu-item aws-option" href="dashboard.html#s3">Buckets</a>
+          <a class="menu-item aws-option" href="dashboard.html#s3">Access Points</a>
+          <a class="menu-item aws-option" href="dashboard.html#s3">Object Lambda Access Points</a>
+          <a class="menu-item aws-option" href="dashboard.html#s3">Multi-Region Access Points</a>
+          <a class="menu-item aws-option" href="dashboard.html#s3">Batch Operations</a>
+          <a class="menu-item aws-option" href="dashboard.html#s3">Storage Lens</a>
+          <a class="menu-item aws-option" href="dashboard.html#s3">Storage Lens Groups</a>
+          <a class="menu-item aws-option" href="dashboard.html#s3">Inventory</a>
+          <a class="menu-item aws-option" href="dashboard.html#s3">Replication</a>
+          <a class="menu-item aws-option" href="dashboard.html#s3">Block Public Access</a>
+          <a class="menu-item aws-option" href="dashboard.html#s3">IAM Access Analyzer for S3</a>
+        </details>
+      </div>
+
+      <div class="menu-section">
+        <p class="menu-title">VPC</p>
+        <details class="service-dropdown">
+          <summary class="menu-item">VPC</summary>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Your VPCs</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Subnets</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Route Tables</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Internet Gateways</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Egress-Only Internet Gateways</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">NAT Gateways</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Elastic IPs</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Network Interfaces</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Endpoints</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Endpoint Services</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Peering Connections</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Transit Gateways</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Transit Gateway Attachments</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Network ACLs</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Security Groups</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Prefix Lists</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">DHCP Option Sets</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Customer Gateways</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Virtual Private Gateways</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Site-to-Site VPN Connections</a>
+          <a class="menu-item aws-option" href="dashboard.html#vpc">Client VPN Endpoints</a>
+        </details>
       </div>
 
       <div class="menu-section admin-menu">
@@ -76,9 +129,7 @@
           <div id="profileDropdown" class="profile-dropdown">
             <p class="profile-email" id="profileEmail">user@nimbusx.com</p>
             <a href="#" id="myProfileLink">My Account</a>
-            <a href="#">Two-Factor Authentication</a>
-            <a href="#">SSH Keys</a>
-            <a href="#">Go to Admin Panel</a>
+            <a href="#" id="twoFactorLink">Two-Factor Authentication</a>
             <button id="logoutButton" type="button">Sign Out</button>
           </div>
         </div>
@@ -112,7 +163,7 @@
     </main>
   </div>
 
-  <script src="projects-sync.js?v=5"></script>
+  <script src="projects-sync.js?v=7"></script>
   <script>
     const user = localStorage.getItem("nimbusUser");
     const profileButton = document.getElementById("profileButton");
@@ -336,5 +387,7 @@
     }
 
   </script>
+  <button class="back-to-top" type="button" aria-label="Back to top">&uarr;</button>
+  <script src="script.js?v=6"></script>
 </body>
 </html>
