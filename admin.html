@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Console - NimbusX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="auth.css?v=16" />
+</head>
+<body class="admin-page">
+  <div id="adminLoginShell" class="admin-login-shell">
+    <section class="auth-card">
+      <a class="brand" href="/" aria-label="NimbusX home">
+        <span class="brand-mark">N</span>
+        <span>NimbusX</span>
+      </a>
+      <h1>Admin Console</h1>
+      <p>Sign in with an account that has admin console access.</p>
+
+      <form id="adminLoginForm">
+        <label>
+          Work Email
+          <input id="adminEmail" type="email" placeholder="owner@nimbusx.com" required />
+        </label>
+        <label>
+          Password
+          <input id="adminPassword" type="password" placeholder="Enter password" required />
+        </label>
+        <button class="btn" type="submit">Enter Console</button>
+      </form>
+      <p id="adminLoginMessage" class="form-message"></p>
+      <a class="back" href="/">&larr; Back to website</a>
+    </section>
+  </div>
+
+  <main id="adminApp" class="admin-shell" hidden>
+    <header class="admin-topbar">
+      <div>
+        <h1>Admin Console</h1>
+        <p id="adminSummary">Loading session</p>
+      </div>
+      <div class="admin-meta">
+        <button id="groupsJumpButton" class="admin-button" type="button" aria-expanded="false">Groups</button>
+        <span id="adminRoleBadge" class="admin-badge">Admin</span>
+        <button id="refreshButton" class="admin-button" type="button">Refresh</button>
+        <button id="logoutButton" class="admin-button danger" type="button">Logout</button>
+      </div>
+    </header>
+
+    <section class="admin-overview-grid" id="overviewGrid"></section>
+
+    <section class="admin-layout">
+      <div class="admin-stack">
+        <article class="admin-card">
+          <div class="admin-section-header">
+            <div>
+              <h2>Users</h2>
+              <p class="admin-muted">Search accounts, assign groups, disable users, and open a user dashboard in one click.</p>
+            </div>
+            <div class="admin-toolbar">
+              <input id="userSearchInput" type="text" placeholder="Search users" />
+            </div>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Group</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article id="groupsSection" class="admin-card" hidden>
+          <div class="admin-section-header">
+            <div>
+              <h2>Groups</h2>
+              <p class="admin-muted">Use the buttons below to open a group directly, then edit permissions without scrolling through every group card.</p>
+            </div>
+            <div class="admin-toolbar">
+              <input id="groupSearchInput" type="text" placeholder="Search groups" />
+            </div>
+          </div>
+
+          <div class="group-browser">
+            <aside class="group-rail">
+              <div class="group-rail-head">
+                <strong>All groups</strong>
+                <span id="groupCountLabel" class="admin-chip">0</span>
+              </div>
+              <div id="groupListRail" class="group-list-rail"></div>
+            </aside>
+
+            <div class="group-editor">
+              <form id="groupCreateForm" class="admin-form">
+                <label>
+                  Group name
+                  <input id="groupName" type="text" placeholder="devops" />
+                </label>
+                <label>
+                  Description
+                  <textarea id="groupDescription" placeholder="Describe what this group can do"></textarea>
+                </label>
+                <div>
+                  <div class="admin-muted">Permissions for new group</div>
+                  <div id="groupPermissionGrid" class="permission-grid"></div>
+                </div>
+                <div class="admin-form-actions">
+                  <button class="admin-button primary" type="submit">Create group</button>
+                </div>
+              </form>
+
+              <div id="selectedGroupPanel" class="selected-group-panel">
+                <div class="admin-section-header">
+                  <div>
+                    <h3 id="selectedGroupTitle">Select a group</h3>
+                    <p id="selectedGroupDescription" class="admin-muted">Choose a group from the buttons on the left to edit it here.</p>
+                  </div>
+                </div>
+                <div id="selectedGroupContent" class="admin-empty">No group selected.</div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="admin-card">
+          <div class="admin-section-header">
+            <div>
+              <h2>Activity</h2>
+              <p class="admin-muted">Recent admin actions and platform changes.</p>
+            </div>
+          </div>
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Action</th>
+                  <th>Actor</th>
+                  <th>Target</th>
+                  <th>Details</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody id="auditTableBody"></tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="admin.js?v=1"></script>
+</body>
+</html>

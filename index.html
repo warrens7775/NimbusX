@@ -14,7 +14,7 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="site.css?v=7" />
+  <link rel="stylesheet" href="site.css?v=10" />
 </head>
 <body>
   <div class="scroll-progress" aria-hidden="true"></div>
@@ -32,15 +32,15 @@
       </button>
 
       <nav class="site-nav" id="siteNav">
-        <a href="compute.html">Compute</a>
-        <a href="storage.html">Storage</a>
-        <a href="networking.html">Networking</a>
-        <a href="pricing.html">Pricing</a>
+        <a href="compute">Compute</a>
+        <a href="storage">Storage</a>
+        <a href="networking">Networking</a>
+        <a href="pricing">Pricing</a>
         <a href="#support">Support</a>
-        <a href="contact.html">Contact</a>
+        <a href="contact">Contact</a>
       </nav>
 
-      <a class="btn btn-sm btn-secondary hide-mobile" href="contact.html">Request Demo</a>
+      <a class="btn btn-sm btn-secondary hide-mobile" href="contact">Request Demo</a>
     </div>
   </header>
 
@@ -65,47 +65,21 @@
           </ul>
         </div>
 
-        <div class="hero-panel ui-console" data-tilt>
-          <div class="console-toolbar">
-            <span></span>
-            <span></span>
-            <span></span>
-            <strong>nimbusx-prod</strong>
+        <div class="hero-panel hero-visual" data-tilt>
+          <img src="assets/nimbusx-3d-cloud.png" alt="3D NimbusX cloud infrastructure platform" />
+          <span class="orbit-ring orbit-a" aria-hidden="true"></span>
+          <span class="orbit-ring orbit-b" aria-hidden="true"></span>
+          <div class="visual-glass visual-top" data-depth-card>
+            <span>Live Region</span>
+            <strong>Mumbai active</strong>
           </div>
-          <div class="console-command">
-            <span>$</span>
-            <code>nimbus deploy vm api-prod --vpc private --backup daily</code>
+          <div class="visual-glass visual-mid" data-depth-card>
+            <span>Protected capacity</span>
+            <strong>12.4 TB replicated</strong>
           </div>
-          <div class="console-status">
-            <article>
-              <span>Compute</span>
-              <strong>28 VMs</strong>
-              <i style="--fill: 82%"></i>
-            </article>
-            <article>
-              <span>Object Storage</span>
-              <strong>12.4 TB</strong>
-              <i style="--fill: 64%"></i>
-            </article>
-            <article>
-              <span>VPC Traffic</span>
-              <strong>8.7 Gbps</strong>
-              <i style="--fill: 76%"></i>
-            </article>
-          </div>
-          <div class="infra-map" aria-label="NimbusX infrastructure map">
-            <span class="map-node map-edge">LB</span>
-            <span class="map-node map-compute">VM</span>
-            <span class="map-node map-vpc">VPC</span>
-            <span class="map-node map-store">S3</span>
-            <span class="map-link link-a"></span>
-            <span class="map-link link-b"></span>
-            <span class="map-link link-c"></span>
-          </div>
-          <div class="console-feed">
-            <div><span></span> Firewall rules synced</div>
-            <div><span></span> Snapshot policy attached</div>
-            <div><span></span> VPN route propagated</div>
+          <div class="visual-glass visual-bottom" data-depth-card>
+            <span>Launch pipeline</span>
+            <strong>VM + VPC + Backup</strong>
           </div>
         </div>
       </div>
@@ -122,6 +96,25 @@
       </div>
     </section>
 
+    <section class="three-cloud" id="live-model">
+      <canvas id="cloudModelCanvas" aria-label="Animated 3D NimbusX cloud infrastructure model"></canvas>
+      <div class="container three-overlay">
+        <div class="three-copy">
+          <p class="kicker">Live 3D Cloud Model</p>
+          <h2>Infrastructure that moves like your production traffic.</h2>
+          <p>
+            Watch compute, storage, network, and backup layers operate as a connected topology
+            with animated routing paths and live service nodes.
+          </p>
+        </div>
+        <div class="three-stats">
+          <div class="model-stat" data-depth-card><span>Compute layer</span><strong>Elastic VM grid</strong></div>
+          <div class="model-stat" data-depth-card><span>Storage layer</span><strong>Replicated vaults</strong></div>
+          <div class="model-stat" data-depth-card><span>Network layer</span><strong>Private VPC mesh</strong></div>
+        </div>
+      </div>
+    </section>
+
     <section class="deploy-flow">
       <div class="container deploy-shell">
         <div>
@@ -133,6 +126,59 @@
           <article data-tilt><span>02</span><strong>Apply guardrails</strong><p>Networking, firewall, access, snapshots, and spend controls.</p></article>
           <article data-tilt><span>03</span><strong>Launch live</strong><p>Provision resources with status, logs, and usage visibility.</p></article>
         </div>
+      </div>
+    </section>
+
+    <section class="experience-3d">
+      <div class="container experience-grid">
+        <div class="experience-copy">
+          <p class="kicker">3D Infrastructure View</p>
+          <h2>See compute, storage, and network layers as one operating surface.</h2>
+          <p>
+            NimbusX presents infrastructure as connected layers, so teams can reason about routing,
+            capacity, backup policy, and workload health without jumping across disconnected tools.
+          </p>
+          <ul class="ticks">
+            <li>Visualize VPC paths, storage tiers, and backup boundaries together</li>
+            <li>Track live capacity and service health from one command center</li>
+            <li>Use guided deployment flows for repeatable production launches</li>
+          </ul>
+        </div>
+
+        <div class="media-stage" data-tilt>
+          <img src="assets/nimbusx-3d-cloud.png" alt="Isometric 3D NimbusX cloud control plane" />
+          <div class="depth-card depth-card-one" data-depth-card>
+            <span>Compute</span>
+            <strong>28 VMs</strong>
+          </div>
+          <div class="depth-card depth-card-two" data-depth-card>
+            <span>Private traffic</span>
+            <strong>8.7 Gbps</strong>
+          </div>
+          <div class="depth-card depth-card-three" data-depth-card>
+            <span>Snapshots</span>
+            <strong>Daily policy</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="image-showcase">
+      <div class="container showcase-grid">
+        <figure class="image-panel image-panel-large" data-tilt>
+          <img src="assets/nimbusx-command-center.png" alt="3D NimbusX cloud operations command center" />
+          <figcaption>
+            <span>Command Center</span>
+            <strong>Operations, telemetry, and incident flow in one animated workspace.</strong>
+          </figcaption>
+        </figure>
+        <figure class="image-panel" data-tilt>
+          <img src="assets/nimbusx-service-modules.png" alt="3D NimbusX modular cloud services" />
+          <figcaption>
+            <span>Service Models</span>
+            <strong>Compute, storage, VPN, backup, and container layers as connected modules.</strong>
+          </figcaption>
+        </figure>
       </div>
     </section>
 
@@ -594,6 +640,7 @@
   </footer>
 
   <button class="back-to-top" type="button" aria-label="Back to top">↑</button>
-  <script src="script.js?v=6"></script>
+  <script src="assets/vendor/three.min.js?v=160"></script>
+  <script src="script.js?v=9"></script>
 </body>
 </html>

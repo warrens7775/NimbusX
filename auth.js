@@ -65,7 +65,7 @@ if (registerForm) {
       message.style.color = "#7de7c2";
       localStorage.setItem("nimbusUser", JSON.stringify(result.user || { fullName, email }));
       setTimeout(() => {
-        window.location.href = "dashboard.html";
+        window.location.href = "dashboard";
       }, 900);
     } else {
       message.style.color = "#ff9ea8";
@@ -97,7 +97,7 @@ if (loginForm) {
       message.style.color = "#7de7c2";
       localStorage.setItem("nimbusUser", JSON.stringify(result.user || { email }));
       setTimeout(() => {
-        window.location.href = "dashboard.html";
+        window.location.href = "dashboard";
       }, 700);
     } else {
       message.style.color = "#ff9ea8";

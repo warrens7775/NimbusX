@@ -16,7 +16,7 @@
   <div class="scroll-progress" aria-hidden="true"></div>
   <div class="dash-layout">
     <aside class="dash-sidebar">
-      <a class="brand dash-brand" href="index.html" aria-label="NimbusX home">
+      <a class="brand dash-brand" href="/" aria-label="NimbusX home">
         <span class="brand-mark">N</span>
         <span>NimbusX</span>
       </a>
@@ -120,8 +120,9 @@
           Administration <span class="menu-caret">▾</span>
         </button>
         <div id="adminMenuList" class="admin-menu-list open">
-          <a class="menu-item" href="billing-history.html">Billing History</a>
-          <a class="menu-item" href="teams.html">Teams</a>
+          <a class="menu-item" href="admin">Admin Console</a>
+          <a class="menu-item" href="billing-history">Billing History</a>
+          <a class="menu-item" href="teams">Teams</a>
         </div>
       </div>
     </aside>
@@ -422,7 +423,7 @@
 
     if (goToProjectsButton) {
       goToProjectsButton.addEventListener("click", () => {
-        window.location.href = "projects.html";
+        window.location.href = "projects";
       });
     }
 
@@ -482,7 +483,7 @@
     if (logoutButton) {
       logoutButton.addEventListener("click", () => {
         localStorage.removeItem("nimbusUser");
-        window.location.href = "login.html";
+        window.location.href = "login";
       });
     }
 

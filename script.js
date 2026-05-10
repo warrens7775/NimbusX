@@ -3,7 +3,7 @@ const siteNav = document.getElementById("siteNav");
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const siteHeader = document.querySelector(".site-header");
 const backToTop = document.querySelector(".back-to-top");
-const parallaxTargets = document.querySelectorAll(".hero-content, .ui-console, .page-hero .container");
+const parallaxTargets = document.querySelectorAll(".hero-content, .hero-panel, .three-copy, .page-hero .container");
 const canUseCursorEffect =
   !reduceMotion && window.matchMedia("(pointer: fine)").matches && !window.matchMedia("(hover: none)").matches;
 let scrollTicking = false;
@@ -55,7 +55,7 @@ if (canUseCursorEffect) {
   });
 
   document.querySelectorAll(
-    "a, button, input, select, textarea, .card, .price-card, .resource-card, .hero-panel, .flow-steps article, .auth-card, .dash-sidebar, .empty-state, .projects-table, .project-modal"
+    "a, button, input, select, textarea, .card, .price-card, .resource-card, .hero-panel, .flow-steps article, .media-stage, .depth-card, .visual-glass, .auth-card, .dash-sidebar, .empty-state, .projects-table, .project-modal"
   ).forEach((element) => {
     element.addEventListener("pointerenter", () => document.body.classList.add("cursor-hover"));
     element.addEventListener("pointerleave", () => document.body.classList.remove("cursor-hover"));
@@ -287,6 +287,13 @@ const revealTargets = document.querySelectorAll(
     ".region-card",
     ".blog-card",
     ".calculator",
+    ".three-copy",
+    ".model-stat",
+    ".experience-copy",
+    ".media-stage",
+    ".image-panel",
+    ".depth-card",
+    ".visual-glass",
     ".comparison-table",
     ".security-detail-grid",
     ".faq-grid article",
@@ -329,8 +336,237 @@ if ("IntersectionObserver" in window) {
   revealTargets.forEach((element) => element.classList.add("is-visible"));
 }
 
+const modelCanvas = document.getElementById("cloudModelCanvas");
+
+if (modelCanvas && window.THREE) {
+  const THREE = window.THREE;
+  const section = modelCanvas.closest(".three-cloud");
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+  const renderer = new THREE.WebGLRenderer({
+    canvas: modelCanvas,
+    antialias: true,
+    alpha: true,
+    preserveDrawingBuffer: true,
+    powerPreference: "high-performance",
+  });
+  const root = new THREE.Group();
+  const packetPaths = [];
+  const pointer = { x: 0, y: 0 };
+  const accentTeal = new THREE.Color("#0891b2");
+  const accentCyan = new THREE.Color("#67e8f9");
+  const accentAmber = new THREE.Color("#f59e0b");
+
+  renderer.setClearColor(0x000000, 0);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  scene.add(root);
+
+  camera.position.set(0, 5.8, 12);
+  camera.lookAt(0, 0, 0);
+
+  scene.add(new THREE.AmbientLight(0xbdf8ff, 1.45));
+
+  const keyLight = new THREE.DirectionalLight(0xffffff, 2.4);
+  keyLight.position.set(-4, 8, 6);
+  scene.add(keyLight);
+
+  const tealLight = new THREE.PointLight(0x67e8f9, 8.5, 22);
+  tealLight.position.set(4.8, 3, 4.8);
+  scene.add(tealLight);
+
+  const amberLight = new THREE.PointLight(0xf59e0b, 6.2, 18);
+  amberLight.position.set(-4.2, 2.8, -3.4);
+  scene.add(amberLight);
+
+  const darkMaterial = new THREE.MeshStandardMaterial({
+    color: 0x18181b,
+    roughness: 0.42,
+    metalness: 0.72,
+  });
+  const tealMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0891b2,
+    roughness: 0.28,
+    metalness: 0.5,
+    emissive: 0x034452,
+    emissiveIntensity: 1.05,
+  });
+  const cyanMaterial = new THREE.MeshStandardMaterial({
+    color: 0x67e8f9,
+    roughness: 0.2,
+    metalness: 0.35,
+    emissive: 0x0e7490,
+    emissiveIntensity: 1.35,
+  });
+  const amberMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf59e0b,
+    roughness: 0.28,
+    metalness: 0.35,
+    emissive: 0x7c2d12,
+    emissiveIntensity: 1.1,
+  });
+
+  const platform = new THREE.Mesh(new THREE.BoxGeometry(8.8, 0.24, 5.4), darkMaterial);
+  platform.position.y = -0.28;
+  platform.rotation.y = -0.04;
+  root.add(platform);
+
+  const grid = new THREE.GridHelper(12, 24, 0x67e8f9, 0x27272a);
+  grid.position.y = -0.13;
+  grid.material.transparent = true;
+  grid.material.opacity = 0.34;
+  root.add(grid);
+
+  const addServer = (x, z, height, material = tealMaterial) => {
+    const group = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.48, height, 0.56), material);
+    body.position.y = height / 2;
+    group.add(body);
+
+    for (let i = 0; i < 3; i += 1) {
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.035, 0.59), cyanMaterial);
+      stripe.position.set(0, 0.28 + i * 0.34, 0.01);
+      group.add(stripe);
+    }
+
+    group.position.set(x, -0.16, z);
+    root.add(group);
+    return group;
+  };
+
+  const addStorage = (x, z) => {
+    const group = new THREE.Group();
+    for (let i = 0; i < 4; i += 1) {
+      const disk = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.16, 40), i % 2 ? cyanMaterial : darkMaterial);
+      disk.position.y = i * 0.2;
+      group.add(disk);
+    }
+    group.position.set(x, 0.02, z);
+    root.add(group);
+    return group;
+  };
+
+  const addNode = (x, z, material, scale = 1) => {
+    const node = new THREE.Mesh(new THREE.SphereGeometry(0.18 * scale, 24, 16), material);
+    node.position.set(x, 0.18, z);
+    root.add(node);
+    return node;
+  };
+
+  const servers = [
+    addServer(-2.9, -1.4, 1.35),
+    addServer(-2.25, -1.4, 1.65, cyanMaterial),
+    addServer(-1.6, -1.4, 1.18),
+    addServer(2.45, -1.38, 1.25),
+    addServer(3.1, -1.38, 1.48, cyanMaterial),
+    addServer(2.82, 1.15, 1.15),
+  ];
+
+  const storage = [addStorage(-0.35, 1.32), addStorage(0.52, 1.12), addStorage(1.34, 0.92)];
+  const nodes = [
+    addNode(-3.5, 1.55, amberMaterial, 1.15),
+    addNode(-0.2, -1.76, cyanMaterial, 1.08),
+    addNode(3.72, 1.42, amberMaterial, 1.15),
+    addNode(0.2, 0.02, tealMaterial, 1.35),
+  ];
+
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(1.05, 0.035, 12, 96),
+    new THREE.MeshStandardMaterial({
+      color: 0x67e8f9,
+      emissive: 0x0891b2,
+      emissiveIntensity: 1.2,
+      metalness: 0.2,
+      roughness: 0.18,
+    })
+  );
+  ring.position.set(0.18, 0.52, 0.04);
+  ring.rotation.x = Math.PI / 2;
+  root.add(ring);
+
+  const makePath = (points, color) => {
+    const curve = new THREE.CatmullRomCurve3(points.map((point) => new THREE.Vector3(point[0], point[1], point[2])));
+    const geometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(72));
+    const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.68 });
+    const line = new THREE.Line(geometry, material);
+    const packet = new THREE.Mesh(new THREE.SphereGeometry(0.085, 16, 12), color === 0xf59e0b ? amberMaterial : cyanMaterial);
+    root.add(line, packet);
+    packetPaths.push({ curve, packet, speed: 0.08 + Math.random() * 0.05, offset: Math.random() });
+  };
+
+  makePath([[-3.5, 0.3, 1.55], [-1.2, 0.34, 0.2], [0.2, 0.42, 0.02], [3.72, 0.3, 1.42]], 0x67e8f9);
+  makePath([[-2.6, 0.3, -1.42], [-0.8, 0.42, -0.7], [0.2, 0.48, 0.02], [2.8, 0.3, -1.38]], 0xf59e0b);
+  makePath([[-0.35, 0.3, 1.32], [0.2, 0.52, 0.02], [2.82, 0.34, 1.15]], 0x67e8f9);
+
+  root.rotation.x = -0.18;
+  root.rotation.y = -0.32;
+  root.position.set(2.25, 0.08, -0.2);
+
+  const resizeModel = () => {
+    const rect = section.getBoundingClientRect();
+    const width = Math.max(1, rect.width);
+    const height = Math.max(1, rect.height);
+    renderer.setSize(width, height, false);
+    camera.aspect = width / height;
+    camera.position.z = width < 720 ? 15.5 : 12;
+    root.position.x = width < 720 ? 0.25 : 2.25;
+    root.position.y = width < 720 ? -1.05 : 0.08;
+    root.scale.setScalar(width < 720 ? 0.82 : 1);
+    camera.updateProjectionMatrix();
+  };
+
+  window.addEventListener("resize", resizeModel);
+  section.addEventListener(
+    "pointermove",
+    (event) => {
+      const rect = section.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
+      pointer.y = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+    },
+    { passive: true }
+  );
+
+  const clock = new THREE.Clock();
+  let modelFrame = 0;
+
+  const renderModel = () => {
+    const elapsed = clock.getElapsedTime();
+    modelFrame += 1;
+
+    root.rotation.y += ((-0.32 + pointer.x * 0.16) - root.rotation.y) * 0.035;
+    root.rotation.x += ((-0.18 - pointer.y * 0.06) - root.rotation.x) * 0.035;
+    ring.rotation.z = elapsed * 0.8;
+
+    servers.forEach((server, index) => {
+      server.position.y = -0.16 + Math.sin(elapsed * 1.3 + index * 0.7) * 0.035;
+    });
+
+    storage.forEach((item, index) => {
+      item.rotation.y = elapsed * (0.35 + index * 0.08);
+    });
+
+    nodes.forEach((node, index) => {
+      const pulse = 1 + Math.sin(elapsed * 2.2 + index) * 0.12;
+      node.scale.setScalar(pulse);
+    });
+
+    packetPaths.forEach((path) => {
+      const t = (elapsed * path.speed + path.offset) % 1;
+      path.packet.position.copy(path.curve.getPointAt(t));
+    });
+
+    renderer.render(scene, camera);
+
+    if (!reduceMotion || modelFrame < 3) {
+      window.requestAnimationFrame(renderModel);
+    }
+  };
+
+  resizeModel();
+  renderModel();
+}
+
 if (!reduceMotion && window.matchMedia("(pointer: fine)").matches) {
-  document.querySelectorAll("[data-tilt], .card, .price-card, .resource-card").forEach((element) => {
+  document.querySelectorAll("[data-tilt], [data-depth-card], .card, .price-card, .resource-card, .image-panel").forEach((element) => {
     element.addEventListener("pointermove", (event) => {
       const rect = element.getBoundingClientRect();
       const x = (event.clientX - rect.left) / rect.width - 0.5;

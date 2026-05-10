@@ -365,9 +365,9 @@ async function openAccountModal() {
       <section class="account-section">
         <h4>Account Links</h4>
         <div class="account-link-grid">
-          <a href="projects.html">Projects</a>
-          <a href="billing-history.html">Billing History</a>
-          <a href="teams.html">Teams</a>
+          <a href="projects">Projects</a>
+          <a href="billing-history">Billing History</a>
+          <a href="teams">Teams</a>
         </div>
       </section>
 
@@ -393,7 +393,7 @@ async function openAccountModal() {
   overlay.querySelector('[data-action="close"]').addEventListener("click", close);
   overlay.querySelector('[data-action="sign-out"]').addEventListener("click", () => {
     localStorage.removeItem("nimbusUser");
-    window.location.href = "login.html";
+    window.location.href = "login";
   });
   overlay.querySelector('[data-action="manage-2fa"]').addEventListener("click", async () => {
     close();
