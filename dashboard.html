@@ -10,7 +10,7 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="auth.css?v=15" />
+  <link rel="stylesheet" href="auth.css?v=25" />
 </head>
 <body class="dashboard-page">
   <div class="scroll-progress" aria-hidden="true"></div>
@@ -72,18 +72,18 @@
       <div class="menu-section">
         <p class="menu-title">S3</p>
         <details class="service-dropdown">
-          <summary class="menu-item" data-resource="object-storage">S3</summary>
-          <a class="menu-item aws-option" href="#s3">Buckets</a>
-          <a class="menu-item aws-option" href="#s3">Access Points</a>
-          <a class="menu-item aws-option" href="#s3">Object Lambda Access Points</a>
-          <a class="menu-item aws-option" href="#s3">Multi-Region Access Points</a>
-          <a class="menu-item aws-option" href="#s3">Batch Operations</a>
-          <a class="menu-item aws-option" href="#s3">Storage Lens</a>
-          <a class="menu-item aws-option" href="#s3">Storage Lens Groups</a>
-          <a class="menu-item aws-option" href="#s3">Inventory</a>
-          <a class="menu-item aws-option" href="#s3">Replication</a>
-          <a class="menu-item aws-option" href="#s3">Block Public Access</a>
-          <a class="menu-item aws-option" href="#s3">IAM Access Analyzer for S3</a>
+          <summary class="menu-item" data-resource="object-storage" data-s3-view="overview">S3</summary>
+          <a class="menu-item aws-option" href="#s3-buckets" data-s3-view="buckets">Buckets</a>
+          <a class="menu-item aws-option" href="#s3" data-s3-view="overview">Access Points</a>
+          <a class="menu-item aws-option" href="#s3" data-s3-view="overview">Object Lambda Access Points</a>
+          <a class="menu-item aws-option" href="#s3" data-s3-view="overview">Multi-Region Access Points</a>
+          <a class="menu-item aws-option" href="#s3" data-s3-view="overview">Batch Operations</a>
+          <a class="menu-item aws-option" href="#s3" data-s3-view="overview">Storage Lens</a>
+          <a class="menu-item aws-option" href="#s3" data-s3-view="overview">Storage Lens Groups</a>
+          <a class="menu-item aws-option" href="#s3" data-s3-view="overview">Inventory</a>
+          <a class="menu-item aws-option" href="#s3" data-s3-view="overview">Replication</a>
+          <a class="menu-item aws-option" href="#s3" data-s3-view="overview">Block Public Access</a>
+          <a class="menu-item aws-option" href="#s3" data-s3-view="overview">IAM Access Analyzer for S3</a>
         </details>
       </div>
 
@@ -156,6 +156,14 @@
         <button id="secondaryResourceTab" class="tab" type="button">Images</button>
       </section>
 
+      <section id="s3BucketToolbar" class="s3-bucket-toolbar" hidden>
+        <div>
+          <p class="s3-kicker">Buckets</p>
+          <h2>Object storage buckets</h2>
+        </div>
+        <button id="createBucketToolbarButton" class="project-modal-btn primary" type="button">Create bucket</button>
+      </section>
+
       <section class="empty-state">
         <div class="empty-icon">N</div>
         <h2 id="resourceEmptyTitle">No EC2 instances</h2>
@@ -165,11 +173,73 @@
 
       <section id="vmListSection" class="vm-list-section" hidden>
         <div class="projects-row head vm-table-head">
-          <span>Name</span>
-          <span>Status</span>
-          <span>Region</span>
+          <span id="resourceColumnName">Name</span>
+          <span id="resourceColumnStatus">Status</span>
+          <span id="resourceColumnRegion">Region</span>
         </div>
         <div id="vmListBody"></div>
+      </section>
+
+      <section id="s3Manager" class="s3-manager" hidden>
+        <div class="s3-manager-head">
+          <div>
+            <p class="s3-kicker">Selected bucket</p>
+            <h2 id="selectedBucketTitle">Bucket</h2>
+            <p id="selectedBucketMeta">0 objects</p>
+          </div>
+          <div class="s3-actions">
+            <button id="backToBucketsButton" class="project-modal-btn" type="button">Back to buckets</button>
+            <button id="refreshObjectsButton" class="project-modal-btn" type="button">Refresh</button>
+            <button id="deleteBucketButton" class="project-modal-btn primary danger" type="button">Delete Bucket</button>
+          </div>
+        </div>
+
+        <div class="s3-upload-bar">
+          <div class="s3-upload-copy">
+            <strong>Upload objects</strong>
+            <span>Select one or more files. For multiple files, the object key field is used as a folder prefix.</span>
+          </div>
+          <div class="s3-upload-controls">
+            <label class="s3-file-picker" for="objectFileInput">
+              <span id="objectFileLabel">Choose Files</span>
+              <input id="objectFileInput" type="file" multiple />
+            </label>
+            <input id="objectKeyInput" type="text" placeholder="docs/ or docs/report.pdf" />
+            <button id="uploadObjectButton" class="project-modal-btn primary" type="button">Upload</button>
+          </div>
+          <div id="uploadProgressWrap" class="s3-upload-progress" hidden>
+            <div class="s3-upload-progress-head">
+              <span id="uploadProgressText">Preparing operation</span>
+              <span id="uploadProgressPercent">0%</span>
+            </div>
+            <div class="s3-upload-progress-track">
+              <span id="uploadProgressBar"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="s3-object-table">
+          <div id="objectBulkToolbar" class="s3-object-bulk" hidden>
+            <span id="objectSelectedCount">0 selected</span>
+            <div class="s3-actions">
+              <button id="clearObjectSelectionButton" class="project-modal-btn" type="button">Clear</button>
+              <button id="deleteSelectedObjectsButton" class="project-modal-btn primary danger" type="button">Delete selected</button>
+            </div>
+          </div>
+          <div class="projects-row head s3-object-head">
+            <span>
+              <label class="s3-select-all">
+                <input id="selectAllObjectsCheckbox" class="s3-object-checkbox" type="checkbox" />
+                <span>All</span>
+              </label>
+            </span>
+            <span>Object key</span>
+            <span>Size</span>
+            <span>Modified</span>
+            <span>Actions</span>
+          </div>
+          <div id="objectListBody"></div>
+        </div>
       </section>
 
       <footer class="dash-footer">
@@ -200,12 +270,38 @@
     const createVmButton = document.getElementById("createVmButton");
     const vmListSection = document.getElementById("vmListSection");
     const vmListBody = document.getElementById("vmListBody");
+    const resourceColumnName = document.getElementById("resourceColumnName");
+    const resourceColumnStatus = document.getElementById("resourceColumnStatus");
+    const resourceColumnRegion = document.getElementById("resourceColumnRegion");
+    const s3Manager = document.getElementById("s3Manager");
+    const selectedBucketTitle = document.getElementById("selectedBucketTitle");
+    const selectedBucketMeta = document.getElementById("selectedBucketMeta");
+    const backToBucketsButton = document.getElementById("backToBucketsButton");
+    const refreshObjectsButton = document.getElementById("refreshObjectsButton");
+    const deleteBucketButton = document.getElementById("deleteBucketButton");
+    const objectFileInput = document.getElementById("objectFileInput");
+    const objectFileLabel = document.getElementById("objectFileLabel");
+    const objectKeyInput = document.getElementById("objectKeyInput");
+    const uploadObjectButton = document.getElementById("uploadObjectButton");
+    const uploadProgressWrap = document.getElementById("uploadProgressWrap");
+    const uploadProgressText = document.getElementById("uploadProgressText");
+    const uploadProgressPercent = document.getElementById("uploadProgressPercent");
+    const uploadProgressBar = document.getElementById("uploadProgressBar");
+    const objectBulkToolbar = document.getElementById("objectBulkToolbar");
+    const objectSelectedCount = document.getElementById("objectSelectedCount");
+    const clearObjectSelectionButton = document.getElementById("clearObjectSelectionButton");
+    const deleteSelectedObjectsButton = document.getElementById("deleteSelectedObjectsButton");
+    const selectAllObjectsCheckbox = document.getElementById("selectAllObjectsCheckbox");
+    const objectListBody = document.getElementById("objectListBody");
     const emptyState = document.querySelector(".empty-state");
     const resourceTitle = document.getElementById("resourceTitle");
     const resourceEmptyTitle = document.getElementById("resourceEmptyTitle");
     const primaryResourceTab = document.getElementById("primaryResourceTab");
     const secondaryResourceTab = document.getElementById("secondaryResourceTab");
+    const s3BucketToolbar = document.getElementById("s3BucketToolbar");
+    const createBucketToolbarButton = document.getElementById("createBucketToolbarButton");
     const resourceMenuItems = document.querySelectorAll("[data-resource]");
+    const s3ViewItems = document.querySelectorAll("[data-s3-view]");
     const emptyMessage = document.getElementById("welcomeText");
     const infraToggle = document.getElementById("infraToggle");
     const infraMenuList = document.getElementById("infraMenuList");
@@ -213,10 +309,14 @@
     const adminMenuList = document.getElementById("adminMenuList");
     let currentState = { projects: [], activeProjectId: null };
     let currentVms = [];
+    let selectedBucketName = "";
+    let s3Objects = [];
+    let selectedObjectKeys = new Set();
     const resourceFromHash = {
       "#compute": "vm",
       "#ec2": "vm",
       "#s3": "object-storage",
+      "#s3-buckets": "object-storage",
       "#vpc": "network",
     };
     const hashFromResource = {
@@ -225,6 +325,7 @@
       network: "#vpc",
     };
     let currentResourceType = resourceFromHash[window.location.hash.toLowerCase()] || "vm";
+    let currentS3View = window.location.hash.toLowerCase() === "#s3-buckets" ? "buckets" : "overview";
     const resourceMeta = {
       vm: {
         title: "EC2",
@@ -238,8 +339,8 @@
       },
       "object-storage": {
         title: "S3",
-        emptyTitle: "No S3 buckets",
-        message: "Create your first S3 bucket to get started.",
+        emptyTitle: "Choose an S3 section",
+        message: "Open Buckets from the S3 menu to view and manage object storage buckets.",
         createText: "Create S3 bucket",
         modalTitle: "Create S3 bucket",
         placeholder: "Enter S3 bucket name",
@@ -283,31 +384,262 @@
       return response.json();
     }
 
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function formatBytes(size) {
+      const value = Number(size || 0);
+      if (value < 1024) return `${value} B`;
+      if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+      if (value < 1024 * 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+      return `${(value / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+    }
+
+    function formatDate(value) {
+      if (!value) return "-";
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return value;
+      return parsed.toLocaleString();
+    }
+
+    function setOperationProgress(percent, text) {
+      const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+      if (uploadProgressWrap) uploadProgressWrap.hidden = false;
+      if (uploadProgressBar) uploadProgressBar.style.width = `${clamped}%`;
+      if (uploadProgressPercent) uploadProgressPercent.textContent = `${clamped}%`;
+      if (uploadProgressText) uploadProgressText.textContent = text;
+    }
+
+    function resetOperationProgress() {
+      if (uploadProgressWrap) uploadProgressWrap.hidden = true;
+      if (uploadProgressBar) uploadProgressBar.style.width = "0%";
+      if (uploadProgressPercent) uploadProgressPercent.textContent = "0%";
+      if (uploadProgressText) uploadProgressText.textContent = "Preparing operation";
+    }
+
+    function uploadObjectWithProgress(payload, progressBase = 0, progressShare = 100, label = "Uploading object") {
+      return new Promise((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        request.open("POST", "/api/s3/objects/upload");
+        request.setRequestHeader("Content-Type", "application/json");
+        request.upload.addEventListener("progress", (event) => {
+          if (!event.lengthComputable) {
+            setOperationProgress(progressBase + progressShare * 0.55, label);
+            return;
+          }
+          const uploadPercent = event.loaded / event.total;
+          setOperationProgress(progressBase + progressShare * (0.45 + uploadPercent * 0.45), label);
+        });
+        request.addEventListener("load", () => {
+          let response = null;
+          try {
+            response = JSON.parse(request.responseText || "{}");
+          } catch (_error) {
+            reject(new Error("Upload response was invalid"));
+            return;
+          }
+          if (request.status >= 200 && request.status < 300 && response.ok) {
+            setOperationProgress(progressBase + progressShare, label);
+            resolve(response);
+            return;
+          }
+          reject(new Error(response.message || "Upload failed"));
+        });
+        request.addEventListener("error", () => reject(new Error("Upload failed")));
+        request.addEventListener("abort", () => reject(new Error("Upload cancelled")));
+        request.send(JSON.stringify(payload));
+      });
+    }
+
+    function readFileAsBase64(file, progressBase, progressShare, label) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onprogress = (event) => {
+          if (event.lengthComputable) {
+            setOperationProgress(progressBase + (event.loaded / event.total) * progressShare * 0.35, label);
+          }
+        };
+        reader.onload = () => resolve(String(reader.result || "").split(",", 2)[1] || "");
+        reader.onerror = () => reject(reader.error || new Error("Could not read file"));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function getObjectKeyForFile(file, rawKey, multipleFiles) {
+      const normalized = rawKey.trim().replace(/^\/+/, "");
+      if (!multipleFiles) return normalized || file.name;
+      const prefix = normalized ? normalized.replace(/\/?$/, "/") : "";
+      return `${prefix}${file.name}`;
+    }
+
+    function setResourceColumns() {
+      const isS3 = currentResourceType === "object-storage";
+      if (resourceColumnName) resourceColumnName.textContent = isS3 ? "Bucket" : "Name";
+      if (resourceColumnStatus) resourceColumnStatus.textContent = "Status";
+      if (resourceColumnRegion) resourceColumnRegion.textContent = isS3 ? "Actions" : "Region";
+    }
+
     function renderVms() {
       if (!vmListBody || !vmListSection || !emptyState) return;
+      setResourceColumns();
+      if (currentResourceType === "object-storage" && currentS3View !== "buckets") {
+        vmListBody.innerHTML = "";
+        vmListSection.hidden = true;
+        emptyState.hidden = false;
+        if (s3BucketToolbar) s3BucketToolbar.hidden = true;
+        if (s3Manager) s3Manager.hidden = true;
+        return;
+      }
       if (!currentVms.length) {
         vmListBody.innerHTML = "";
         vmListSection.hidden = true;
         emptyState.hidden = false;
+        if (s3BucketToolbar) s3BucketToolbar.hidden = true;
+        if (s3Manager) s3Manager.hidden = true;
         return;
       }
 
       emptyState.hidden = true;
       vmListSection.hidden = false;
+      if (currentResourceType === "object-storage") {
+        if (s3BucketToolbar) s3BucketToolbar.hidden = false;
+        vmListBody.innerHTML = currentVms
+          .map(
+            (bucket) => `<div class="projects-row vm-row s3-bucket-row${bucket.name === selectedBucketName ? " active" : ""}">
+              <span>
+                <button class="s3-bucket-toggle" type="button" data-bucket-toggle="${escapeHtml(bucket.name)}">
+                  <span>${bucket.name === selectedBucketName ? "▾" : "▸"}</span>
+                  ${escapeHtml(bucket.name)}
+                </button>
+              </span>
+              <span><span class="vm-status">${escapeHtml(bucket.status)}</span></span>
+              <span class="s3-row-actions">
+                <button class="project-modal-btn" type="button" data-bucket-toggle="${escapeHtml(bucket.name)}">${bucket.name === selectedBucketName ? "Close" : "Open"}</button>
+                <button class="project-modal-btn primary danger" type="button" data-bucket-delete="${escapeHtml(bucket.name)}">Delete</button>
+              </span>
+            </div>`
+          )
+          .join("");
+        renderS3Manager();
+        return;
+      }
+      if (s3BucketToolbar) s3BucketToolbar.hidden = true;
+      if (s3Manager) s3Manager.hidden = true;
       vmListBody.innerHTML = currentVms
         .map(
           (vm) => `<div class="projects-row vm-row">
-            <span>${vm.name}</span>
-            <span><span class="vm-status">${vm.status}</span></span>
-            <span>${vm.region}</span>
+            <span>${escapeHtml(vm.name)}</span>
+            <span><span class="vm-status">${escapeHtml(vm.status)}</span></span>
+            <span>${escapeHtml(vm.region)}</span>
           </div>`
         )
         .join("");
     }
 
+    function renderS3Manager() {
+      if (!s3Manager || !selectedBucketName) {
+        if (s3Manager) s3Manager.hidden = true;
+        return;
+      }
+      s3Manager.hidden = false;
+      selectedObjectKeys = new Set([...selectedObjectKeys].filter((key) => s3Objects.some((object) => object.key === key)));
+      if (selectedBucketTitle) selectedBucketTitle.textContent = selectedBucketName;
+      if (selectedBucketMeta) {
+        const totalSize = s3Objects.reduce((sum, item) => sum + Number(item.size || 0), 0);
+        selectedBucketMeta.textContent = `${s3Objects.length} objects · ${formatBytes(totalSize)}`;
+      }
+      updateObjectSelectionToolbar();
+      if (!objectListBody) return;
+      if (!s3Objects.length) {
+        objectListBody.innerHTML = `<div class="s3-empty-objects">No objects in this bucket.</div>`;
+        return;
+      }
+      objectListBody.innerHTML = s3Objects
+        .map(
+          (object) => `<div class="projects-row s3-object-row">
+            <span>
+              <input class="s3-object-checkbox" type="checkbox" data-object-select="${escapeHtml(object.key)}" ${selectedObjectKeys.has(object.key) ? "checked" : ""} aria-label="Select ${escapeHtml(object.key)}" />
+            </span>
+            <span title="${escapeHtml(object.key)}">${escapeHtml(object.key)}</span>
+            <span>${formatBytes(object.size)}</span>
+            <span>${escapeHtml(formatDate(object.lastModified))}</span>
+            <span class="s3-row-actions">
+              <button class="project-modal-btn" type="button" data-object-download="${escapeHtml(object.key)}">Download</button>
+              <button class="project-modal-btn primary danger" type="button" data-object-delete="${escapeHtml(object.key)}">Delete</button>
+            </span>
+          </div>`
+        )
+        .join("");
+    }
+
+    function updateObjectSelectionToolbar() {
+      const count = selectedObjectKeys.size;
+      if (objectBulkToolbar) objectBulkToolbar.hidden = count === 0;
+      if (objectSelectedCount) objectSelectedCount.textContent = `${count} selected`;
+      if (deleteSelectedObjectsButton) deleteSelectedObjectsButton.disabled = count === 0;
+      if (selectAllObjectsCheckbox) {
+        selectAllObjectsCheckbox.checked = s3Objects.length > 0 && count === s3Objects.length;
+        selectAllObjectsCheckbox.indeterminate = count > 0 && count < s3Objects.length;
+        selectAllObjectsCheckbox.disabled = s3Objects.length === 0;
+      }
+    }
+
+    async function refreshS3Objects() {
+      if (currentResourceType !== "object-storage" || !selectedBucketName || !currentState.activeProjectId) {
+        s3Objects = [];
+        renderS3Manager();
+        return;
+      }
+      const result = await apiGet(
+        `/api/s3/objects?email=${encodeURIComponent(getUserEmail())}&projectId=${encodeURIComponent(
+          currentState.activeProjectId
+        )}&bucketName=${encodeURIComponent(selectedBucketName)}`
+      );
+      if (!result.ok) {
+        window.alert(result.message);
+        s3Objects = [];
+      } else {
+        s3Objects = result.objects || [];
+      }
+      renderS3Manager();
+    }
+
+    async function selectS3Bucket(bucketName) {
+      selectedBucketName = bucketName;
+      s3Objects = [];
+      selectedObjectKeys = new Set();
+      renderVms();
+      await refreshS3Objects();
+    }
+
+    async function toggleS3Bucket(bucketName) {
+      if (selectedBucketName === bucketName) {
+        selectedBucketName = "";
+        s3Objects = [];
+        selectedObjectKeys = new Set();
+        renderVms();
+        return;
+      }
+      await selectS3Bucket(bucketName);
+    }
+
     async function refreshVms() {
       const email = getUserEmail();
       if (!email || !currentState.activeProjectId) return;
+      if (currentResourceType === "object-storage" && currentS3View !== "buckets") {
+        currentVms = [];
+        selectedBucketName = "";
+        s3Objects = [];
+        selectedObjectKeys = new Set();
+        renderVms();
+        return;
+      }
       const result = await apiGet(
         `/api/resources?email=${encodeURIComponent(email)}&projectId=${encodeURIComponent(
           currentState.activeProjectId
@@ -315,19 +647,38 @@
       );
       if (!result.ok) {
         currentVms = [];
+        selectedObjectKeys = new Set();
         renderVms();
         return;
       }
       currentVms = result.resources || [];
+      if (currentResourceType === "object-storage") {
+        const stillExists = currentVms.some((bucket) => bucket.name === selectedBucketName);
+        if (!stillExists) selectedBucketName = "";
+      } else {
+        selectedBucketName = "";
+        s3Objects = [];
+        selectedObjectKeys = new Set();
+      }
       renderVms();
+      if (currentResourceType === "object-storage" && selectedBucketName) {
+        await refreshS3Objects();
+      }
     }
 
     function updateResourceText() {
       const meta = resourceMeta[currentResourceType] || resourceMeta.vm;
+      const isS3Buckets = currentResourceType === "object-storage" && currentS3View === "buckets";
+      const isS3Overview = currentResourceType === "object-storage" && currentS3View !== "buckets";
       if (resourceTitle) resourceTitle.textContent = meta.title;
-      if (resourceEmptyTitle) resourceEmptyTitle.textContent = meta.emptyTitle;
-      if (createVmButton) createVmButton.textContent = meta.createText;
-      if (emptyMessage) emptyMessage.textContent = meta.message;
+      if (resourceEmptyTitle) resourceEmptyTitle.textContent = isS3Buckets ? "No S3 buckets" : meta.emptyTitle;
+      if (createVmButton) {
+        createVmButton.textContent = meta.createText;
+        createVmButton.hidden = isS3Overview;
+      }
+      if (emptyMessage) {
+        emptyMessage.textContent = isS3Buckets ? "Create your first S3 bucket to get started." : meta.message;
+      }
       if (primaryResourceTab) primaryResourceTab.textContent = meta.tab;
       if (secondaryResourceTab) secondaryResourceTab.textContent = meta.secondaryTab;
     }
@@ -338,6 +689,13 @@
         menuItem.classList.toggle("active", isActive);
         const dropdown = menuItem.closest(".service-dropdown");
         if (dropdown) dropdown.open = isActive;
+      });
+      s3ViewItems.forEach((item) => {
+        if (item.dataset.resource) return;
+        item.classList.toggle(
+          "active",
+          currentResourceType === "object-storage" && item.dataset.s3View === currentS3View
+        );
       });
     }
 
@@ -434,6 +792,7 @@
           const type = item.dataset.resource;
           if (!type) return;
           currentResourceType = type;
+          if (type === "object-storage") currentS3View = item.dataset.s3View || "overview";
           if (hashFromResource[type]) {
             window.location.hash = hashFromResource[type];
           }
@@ -446,8 +805,288 @@
       });
     }
 
-    if (createVmButton) {
-      createVmButton.addEventListener("click", async () => {
+    if (s3ViewItems.length) {
+      s3ViewItems.forEach((item) => {
+        if (item.dataset.resource) return;
+        item.addEventListener("click", async (event) => {
+          event.preventDefault();
+          currentResourceType = "object-storage";
+          currentS3View = item.dataset.s3View || "overview";
+          window.location.hash = currentS3View === "buckets" ? "#s3-buckets" : "#s3";
+          selectedBucketName = "";
+          s3Objects = [];
+          selectedObjectKeys = new Set();
+          syncActiveResourceMenu();
+          updateResourceText();
+          await refreshVms();
+        });
+      });
+    }
+
+    if (vmListBody) {
+      vmListBody.addEventListener("click", async (event) => {
+        const toggleButton = event.target.closest("[data-bucket-toggle]");
+        if (toggleButton) {
+          await toggleS3Bucket(toggleButton.dataset.bucketToggle);
+          return;
+        }
+        const deleteButton = event.target.closest("[data-bucket-delete]");
+        if (deleteButton) {
+          const bucketName = deleteButton.dataset.bucketDelete;
+          if (!window.confirm(`Delete bucket "${bucketName}"? The bucket must be empty.`)) return;
+          const result = await apiPost("/api/s3/buckets/delete", {
+            email: getUserEmail(),
+            projectId: Number(currentState.activeProjectId),
+            bucketName,
+          });
+          if (!result.ok) {
+            window.alert(result.message);
+            return;
+          }
+          currentVms = result.resources || [];
+          if (selectedBucketName === bucketName) selectedBucketName = "";
+          s3Objects = [];
+          selectedObjectKeys = new Set();
+          renderVms();
+        }
+      });
+    }
+
+    if (objectListBody) {
+      objectListBody.addEventListener("change", (event) => {
+        const checkbox = event.target.closest("[data-object-select]");
+        if (!checkbox) return;
+        const objectKey = checkbox.dataset.objectSelect;
+        if (checkbox.checked) {
+          selectedObjectKeys.add(objectKey);
+        } else {
+          selectedObjectKeys.delete(objectKey);
+        }
+        updateObjectSelectionToolbar();
+      });
+
+      objectListBody.addEventListener("click", async (event) => {
+        const downloadButton = event.target.closest("[data-object-download]");
+        if (downloadButton) {
+          const objectKey = downloadButton.dataset.objectDownload;
+          const response = await fetch(
+            `/api/s3/objects/download?email=${encodeURIComponent(getUserEmail())}&projectId=${encodeURIComponent(
+              currentState.activeProjectId
+            )}&bucketName=${encodeURIComponent(selectedBucketName)}&key=${encodeURIComponent(objectKey)}`
+          );
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: "Download failed" }));
+            window.alert(error.message);
+            return;
+          }
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = objectKey.split("/").pop() || "object";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(url);
+          return;
+        }
+        const deleteButton = event.target.closest("[data-object-delete]");
+        if (deleteButton) {
+          const objectKey = deleteButton.dataset.objectDelete;
+          if (!window.confirm(`Delete object "${objectKey}"?`)) return;
+          setOperationProgress(15, `Deleting ${objectKey}`);
+          const result = await apiPost("/api/s3/objects/delete", {
+            email: getUserEmail(),
+            projectId: Number(currentState.activeProjectId),
+            bucketName: selectedBucketName,
+            key: objectKey,
+          });
+          if (!result.ok) {
+            setOperationProgress(0, "Delete failed");
+            window.alert(result.message);
+            return;
+          }
+          setOperationProgress(100, "Delete complete");
+          s3Objects = result.objects || [];
+          selectedObjectKeys.delete(objectKey);
+          renderS3Manager();
+          window.setTimeout(resetOperationProgress, 900);
+        }
+      });
+    }
+
+    if (clearObjectSelectionButton) {
+      clearObjectSelectionButton.addEventListener("click", () => {
+        selectedObjectKeys = new Set();
+        renderS3Manager();
+      });
+    }
+
+    if (selectAllObjectsCheckbox) {
+      selectAllObjectsCheckbox.addEventListener("change", () => {
+        if (selectAllObjectsCheckbox.checked) {
+          selectedObjectKeys = new Set(s3Objects.map((object) => object.key));
+        } else {
+          selectedObjectKeys = new Set();
+        }
+        renderS3Manager();
+      });
+    }
+
+    if (deleteSelectedObjectsButton) {
+      deleteSelectedObjectsButton.addEventListener("click", async () => {
+        const keys = [...selectedObjectKeys];
+        if (!keys.length) return;
+        if (!window.confirm(`Delete ${keys.length} selected object${keys.length === 1 ? "" : "s"}?`)) return;
+        deleteSelectedObjectsButton.disabled = true;
+        deleteSelectedObjectsButton.textContent = "Deleting...";
+        setOperationProgress(2, `Deleting ${keys.length} object${keys.length === 1 ? "" : "s"}`);
+        try {
+          let latestObjects = s3Objects;
+          for (let index = 0; index < keys.length; index += 1) {
+            const key = keys[index];
+            setOperationProgress((index / keys.length) * 100, `Deleting ${index + 1} of ${keys.length}: ${key}`);
+            const result = await apiPost("/api/s3/objects/delete", {
+              email: getUserEmail(),
+              projectId: Number(currentState.activeProjectId),
+              bucketName: selectedBucketName,
+              key,
+            });
+            if (!result.ok) {
+              setOperationProgress((index / keys.length) * 100, "Delete failed");
+              window.alert(result.message);
+              break;
+            }
+            latestObjects = result.objects || [];
+            setOperationProgress(((index + 1) / keys.length) * 100, `Deleted ${index + 1} of ${keys.length}`);
+          }
+          s3Objects = latestObjects;
+          selectedObjectKeys = new Set();
+          renderS3Manager();
+          window.setTimeout(resetOperationProgress, 1200);
+        } finally {
+          deleteSelectedObjectsButton.textContent = "Delete selected";
+          deleteSelectedObjectsButton.disabled = false;
+          updateObjectSelectionToolbar();
+        }
+      });
+    }
+
+    if (refreshObjectsButton) {
+      refreshObjectsButton.addEventListener("click", refreshS3Objects);
+    }
+
+    if (backToBucketsButton) {
+      backToBucketsButton.addEventListener("click", () => {
+        selectedBucketName = "";
+        s3Objects = [];
+        selectedObjectKeys = new Set();
+        resetOperationProgress();
+        renderVms();
+      });
+    }
+
+    if (deleteBucketButton) {
+      deleteBucketButton.addEventListener("click", async () => {
+        if (!selectedBucketName) return;
+        if (!window.confirm(`Delete bucket "${selectedBucketName}"? The bucket must be empty.`)) return;
+        const result = await apiPost("/api/s3/buckets/delete", {
+          email: getUserEmail(),
+          projectId: Number(currentState.activeProjectId),
+          bucketName: selectedBucketName,
+        });
+        if (!result.ok) {
+          window.alert(result.message);
+          return;
+        }
+        currentVms = result.resources || [];
+        selectedBucketName = "";
+        s3Objects = [];
+        selectedObjectKeys = new Set();
+        renderVms();
+      });
+    }
+
+    if (objectFileInput && objectKeyInput) {
+      objectFileInput.addEventListener("change", () => {
+        const files = objectFileInput.files ? Array.from(objectFileInput.files) : [];
+        if (files.length === 1 && !objectKeyInput.value.trim()) objectKeyInput.value = files[0].name;
+        if (files.length > 1 && objectKeyInput.value && !objectKeyInput.value.endsWith("/")) {
+          objectKeyInput.value = `${objectKeyInput.value.replace(/\/+$/, "")}/`;
+        }
+        if (objectFileLabel) {
+          objectFileLabel.textContent =
+            files.length > 1 ? `${files.length} files selected` : files[0] ? files[0].name : "Choose Files";
+        }
+      });
+    }
+
+    if (uploadObjectButton) {
+      uploadObjectButton.addEventListener("click", async () => {
+        const files = objectFileInput && objectFileInput.files ? Array.from(objectFileInput.files) : [];
+        if (!selectedBucketName || !files.length) {
+          window.alert("Choose a bucket and at least one file first.");
+          return;
+        }
+        const oversizedFile = files.find((file) => file.size > 25 * 1024 * 1024);
+        if (oversizedFile) {
+          window.alert(`"${oversizedFile.name}" is over the 25 MB dashboard upload limit.`);
+          return;
+        }
+        const rawKey = objectKeyInput.value || "";
+        const multipleFiles = files.length > 1;
+        const uploadItems = files.map((file) => ({
+          file,
+          key: getObjectKeyForFile(file, rawKey, multipleFiles),
+        }));
+        const invalidItem = uploadItems.find((item) => !item.key || item.key.endsWith("/"));
+        if (invalidItem) {
+          window.alert(`Enter a valid object key for "${invalidItem.file.name}".`);
+          return;
+        }
+        uploadObjectButton.disabled = true;
+        setOperationProgress(2, `Starting ${files.length} upload${files.length === 1 ? "" : "s"}`);
+        try {
+          let result = null;
+          for (let index = 0; index < uploadItems.length; index += 1) {
+            const item = uploadItems[index];
+            const base = (index / uploadItems.length) * 100;
+            const share = 100 / uploadItems.length;
+            const label = `Uploading ${index + 1} of ${uploadItems.length}: ${item.file.name}`;
+            setOperationProgress(base, `Reading ${index + 1} of ${uploadItems.length}: ${item.file.name}`);
+            const contentBase64 = await readFileAsBase64(item.file, base, share, `Reading ${index + 1} of ${uploadItems.length}: ${item.file.name}`);
+            setOperationProgress(base + share * 0.4, label);
+            result = await uploadObjectWithProgress(
+              {
+                email: getUserEmail(),
+                projectId: Number(currentState.activeProjectId),
+                bucketName: selectedBucketName,
+                key: item.key,
+                contentType: item.file.type || "application/octet-stream",
+                contentBase64,
+              },
+              base,
+              share,
+              label
+            );
+          }
+          setOperationProgress(100, `Uploaded ${files.length} object${files.length === 1 ? "" : "s"}`);
+          s3Objects = result.objects || [];
+          objectFileInput.value = "";
+          objectKeyInput.value = "";
+          if (objectFileLabel) objectFileLabel.textContent = "Choose Files";
+          renderS3Manager();
+          window.setTimeout(resetOperationProgress, 1200);
+        } catch (error) {
+          setOperationProgress(0, "Upload failed");
+          window.alert(error.message || "Upload failed");
+        } finally {
+          uploadObjectButton.disabled = false;
+        }
+      });
+    }
+
+    async function createCurrentResource() {
         if (!currentState.activeProjectId) return;
         const meta = resourceMeta[currentResourceType] || resourceMeta.vm;
         const vmName = await window.NimbusProjects.openProjectNameModal({
@@ -468,8 +1107,21 @@
           return;
         }
         currentVms = result.resources || [];
+        if (currentResourceType === "object-storage") {
+          selectedBucketName = vmName;
+          s3Objects = [];
+          selectedObjectKeys = new Set();
+          await refreshS3Objects();
+        }
         renderVms();
-      });
+    }
+
+    if (createVmButton) {
+      createVmButton.addEventListener("click", createCurrentResource);
+    }
+
+    if (createBucketToolbarButton) {
+      createBucketToolbarButton.addEventListener("click", createCurrentResource);
     }
 
     if (user) {

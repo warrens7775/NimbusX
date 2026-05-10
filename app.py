@@ -1,13 +1,18 @@
 import json
 import os
+import re
 import sqlite3
 import hashlib
 import hmac
 import base64
+import binascii
 import struct
 import time
+import urllib.error
+import urllib.request
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
-from urllib.parse import parse_qs, quote, urlparse
+from urllib.parse import parse_qs, quote, urlencode, urlparse
+import xml.etree.ElementTree as ET
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -15,6 +20,12 @@ DB_PATH = os.path.join(BASE_DIR, "nimbus.db")
 ADMIN_SESSION_COOKIE = "nimbus_admin_session"
 ADMIN_SESSION_TTL = 60 * 60 * 12
 ADMIN_SESSION_SECRET = os.environ.get("NIMBUS_ADMIN_SECRET", "nimbusx-admin-session-secret")
+S3_ENDPOINT = os.environ.get("S3_ENDPOINT", "").rstrip("/")
+S3_ACCESS_KEY = os.environ.get("S3_ACCESS_KEY", "")
+S3_SECRET_KEY = os.environ.get("S3_SECRET_KEY", "")
+S3_REGION = os.environ.get("S3_REGION", "us-east-1")
+S3_PROVIDER = os.environ.get("S3_PROVIDER", "minio").lower()
+S3_BUCKET_RE = re.compile(r"^(?![0-9]+(?:\.[0-9]+){3}$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$")
 ADMIN_PERMISSION_CATALOG = [
     ("access_admin_console", "Access admin console"),
     ("view_dashboard", "View overview"),
@@ -526,6 +537,186 @@ def serialize_resources(conn, user_id: int, project_id: int, resource_type: str)
     ]
 
 
+def validate_s3_bucket_name(name: str):
+    if not S3_BUCKET_RE.match(name) or ".." in name or ".-" in name or "-." in name:
+        return "Bucket names must be 3-63 characters using lowercase letters, numbers, dots, and hyphens."
+    return ""
+
+
+def _s3_signing_key(secret_key: str, date_stamp: str, region: str):
+    date_key = hmac.new(("AWS4" + secret_key).encode("utf-8"), date_stamp.encode("utf-8"), hashlib.sha256).digest()
+    region_key = hmac.new(date_key, region.encode("utf-8"), hashlib.sha256).digest()
+    service_key = hmac.new(region_key, b"s3", hashlib.sha256).digest()
+    return hmac.new(service_key, b"aws4_request", hashlib.sha256).digest()
+
+
+def _s3_request(
+    method: str,
+    bucket_name: str,
+    object_key: str = "",
+    query_params: dict | None = None,
+    body: bytes = b"",
+    content_type: str = "",
+):
+    if not S3_ENDPOINT or not S3_ACCESS_KEY or not S3_SECRET_KEY:
+        raise RuntimeError("S3 backend is not configured")
+
+    parsed = urlparse(S3_ENDPOINT)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise RuntimeError("S3 endpoint must be a valid http or https URL")
+
+    now = time.gmtime()
+    amz_date = time.strftime("%Y%m%dT%H%M%SZ", now)
+    date_stamp = time.strftime("%Y%m%d", now)
+    canonical_uri = "/" + quote(bucket_name, safe="")
+    if object_key:
+        canonical_uri = f"{canonical_uri}/{quote(object_key, safe='/')}"
+    canonical_query = ""
+    if query_params:
+        canonical_query = urlencode(sorted(query_params.items()), doseq=True, quote_via=quote)
+    payload_hash = hashlib.sha256(body).hexdigest()
+    host = parsed.netloc
+    headers = {
+        "host": host,
+        "x-amz-content-sha256": payload_hash,
+        "x-amz-date": amz_date,
+    }
+    if content_type:
+        headers["content-type"] = content_type
+    canonical_headers = "".join(f"{key}:{headers[key]}\n" for key in sorted(headers))
+    signed_headers = ";".join(sorted(headers))
+    canonical_request = "\n".join(
+        [method, canonical_uri, canonical_query, canonical_headers, signed_headers, payload_hash]
+    )
+    credential_scope = f"{date_stamp}/{S3_REGION}/s3/aws4_request"
+    string_to_sign = "\n".join(
+        [
+            "AWS4-HMAC-SHA256",
+            amz_date,
+            credential_scope,
+            hashlib.sha256(canonical_request.encode("utf-8")).hexdigest(),
+        ]
+    )
+    signing_key = _s3_signing_key(S3_SECRET_KEY, date_stamp, S3_REGION)
+    signature = hmac.new(signing_key, string_to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
+    auth_header = (
+        "AWS4-HMAC-SHA256 "
+        f"Credential={S3_ACCESS_KEY}/{credential_scope}, "
+        f"SignedHeaders={signed_headers}, "
+        f"Signature={signature}"
+    )
+    request_headers = {
+        "Authorization": auth_header,
+        "Host": host,
+        "X-Amz-Content-Sha256": payload_hash,
+        "X-Amz-Date": amz_date,
+    }
+    if content_type:
+        request_headers["Content-Type"] = content_type
+    url = f"{S3_ENDPOINT}{canonical_uri}"
+    if canonical_query:
+        url = f"{url}?{canonical_query}"
+    request_data = body if method in ("POST", "PUT") else None
+    request = urllib.request.Request(url, data=request_data, headers=request_headers, method=method)
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            return response.status, dict(response.headers.items()), response.read()
+    except urllib.error.HTTPError as error:
+        error_body = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"S3 request failed with HTTP {error.code}: {error_body or error.reason}")
+    except urllib.error.URLError as error:
+        raise RuntimeError(f"S3 request failed: {error.reason}")
+
+
+def create_s3_bucket(bucket_name: str):
+    body = b""
+    if S3_PROVIDER not in ("minio", "wasabi") and S3_REGION != "us-east-1":
+        body = (
+            '<CreateBucketConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">'
+            f"<LocationConstraint>{S3_REGION}</LocationConstraint>"
+            "</CreateBucketConfiguration>"
+        ).encode("utf-8")
+    try:
+        _s3_request("PUT", bucket_name, body=body)
+        return ""
+    except RuntimeError as error:
+        message = str(error)
+        if "BucketAlreadyOwnedByYou" in message or "Your previous request to create the named bucket succeeded" in message:
+            return ""
+        return message
+
+
+def _s3_tagging_body(tags: dict[str, str]):
+    tagging = ET.Element("Tagging")
+    tag_set = ET.SubElement(tagging, "TagSet")
+    for key, value in tags.items():
+        tag = ET.SubElement(tag_set, "Tag")
+        ET.SubElement(tag, "Key").text = str(key)
+        ET.SubElement(tag, "Value").text = str(value)
+    return ET.tostring(tagging, encoding="utf-8", xml_declaration=True)
+
+
+def put_s3_bucket_tags(bucket_name: str, tags: dict[str, str]):
+    _s3_request(
+        "PUT",
+        bucket_name,
+        query_params={"tagging": ""},
+        body=_s3_tagging_body(tags),
+        content_type="application/xml",
+    )
+
+
+def put_s3_object_tags(bucket_name: str, object_key: str, tags: dict[str, str]):
+    _s3_request(
+        "PUT",
+        bucket_name,
+        object_key=object_key,
+        query_params={"tagging": ""},
+        body=_s3_tagging_body(tags),
+        content_type="application/xml",
+    )
+
+
+def list_s3_objects(bucket_name: str, prefix: str = ""):
+    _status, _headers, body = _s3_request(
+        "GET",
+        bucket_name,
+        query_params={"list-type": "2", "prefix": prefix},
+    )
+    root = ET.fromstring(body)
+    namespace = ""
+    if root.tag.startswith("{"):
+        namespace = root.tag.split("}", 1)[0] + "}"
+    objects = []
+    for item in root.findall(f"{namespace}Contents"):
+        key = item.findtext(f"{namespace}Key", "")
+        objects.append(
+            {
+                "key": key,
+                "size": int(item.findtext(f"{namespace}Size", "0") or "0"),
+                "lastModified": item.findtext(f"{namespace}LastModified", ""),
+                "etag": (item.findtext(f"{namespace}ETag", "") or "").strip('"'),
+            }
+        )
+    return objects
+
+
+def put_s3_object(bucket_name: str, object_key: str, content: bytes, content_type: str):
+    _s3_request("PUT", bucket_name, object_key=object_key, body=content, content_type=content_type)
+
+
+def get_s3_object(bucket_name: str, object_key: str):
+    return _s3_request("GET", bucket_name, object_key=object_key)
+
+
+def delete_s3_object(bucket_name: str, object_key: str):
+    _s3_request("DELETE", bucket_name, object_key=object_key)
+
+
+def delete_s3_bucket(bucket_name: str):
+    _s3_request("DELETE", bucket_name)
+
+
 class NimbusHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=BASE_DIR, **kwargs)
@@ -572,6 +763,15 @@ class NimbusHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_binary(self, body: bytes, content_type: str, headers: list[tuple[str, str]] | None = None):
+        self.send_response(200)
+        self.send_header("Content-Type", content_type or "application/octet-stream")
+        self.send_header("Content-Length", str(len(body)))
+        for key, value in headers or []:
+            self.send_header(key, value)
+        self.end_headers()
+        self.wfile.write(body)
+
     def _read_json(self):
         content_length = int(self.headers.get("Content-Length", "0"))
         raw = self.rfile.read(content_length)
@@ -593,6 +793,26 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             conn.close()
             return None, None, {"ok": False, "message": "User account is disabled", "status": 403}
         return conn, user, None
+
+    def _with_bucket_resource(self, email: str, project_id, bucket_name: str):
+        if not project_id:
+            return None, None, None, {"ok": False, "message": "Project is required", "status": 400}
+        if not bucket_name:
+            return None, None, None, {"ok": False, "message": "Bucket is required", "status": 400}
+        conn, user, error = self._with_user(email)
+        if error:
+            return None, None, None, error
+        resource = conn.execute(
+            """
+            SELECT id, name FROM resources
+            WHERE user_id = ? AND project_id = ? AND resource_type = 'object-storage' AND name = ?
+            """,
+            (user["id"], project_id, bucket_name),
+        ).fetchone()
+        if not resource:
+            conn.close()
+            return None, None, None, {"ok": False, "message": "Bucket not found in this project", "status": 404}
+        return conn, user, resource, None
 
     def _require_admin(self, permission: str | None = None):
         token = _parse_cookie(self.headers.get("Cookie", ""), ADMIN_SESSION_COOKIE)
@@ -717,6 +937,50 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             conn.close()
             self._send_json({"ok": True, "resources": resources})
             return
+        if parsed.path == "/api/s3/objects":
+            params = parse_qs(parsed.query)
+            email = (params.get("email") or [""])[0]
+            project_id = (params.get("projectId") or [""])[0]
+            bucket_name = (params.get("bucketName") or [""])[0].strip()
+            prefix = (params.get("prefix") or [""])[0]
+            conn, _user, _resource, error = self._with_bucket_resource(email, project_id, bucket_name)
+            if error:
+                self._send_json(error, error.get("status", 400))
+                return
+            conn.close()
+            try:
+                objects = list_s3_objects(bucket_name, prefix)
+            except RuntimeError as s3_error:
+                self._send_json({"ok": False, "message": str(s3_error)}, 502)
+                return
+            self._send_json({"ok": True, "objects": objects})
+            return
+        if parsed.path == "/api/s3/objects/download":
+            params = parse_qs(parsed.query)
+            email = (params.get("email") or [""])[0]
+            project_id = (params.get("projectId") or [""])[0]
+            bucket_name = (params.get("bucketName") or [""])[0].strip()
+            object_key = (params.get("key") or [""])[0]
+            if not object_key:
+                self._send_json({"ok": False, "message": "Object key is required"}, 400)
+                return
+            conn, _user, _resource, error = self._with_bucket_resource(email, project_id, bucket_name)
+            if error:
+                self._send_json(error, error.get("status", 400))
+                return
+            conn.close()
+            try:
+                _status, headers, body = get_s3_object(bucket_name, object_key)
+            except RuntimeError as s3_error:
+                self._send_json({"ok": False, "message": str(s3_error)}, 502)
+                return
+            filename = os.path.basename(object_key.rstrip("/")) or "object"
+            self._send_binary(
+                body,
+                headers.get("Content-Type", "application/octet-stream"),
+                [("Content-Disposition", f'attachment; filename="{filename}"')],
+            )
+            return
 
         if self._clean_static_path(parsed):
             return
@@ -748,6 +1012,9 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             "/api/projects/edit": self.handle_project_edit,
             "/api/vms/create": self.handle_vm_create,
             "/api/resources/create": self.handle_resource_create,
+            "/api/s3/objects/upload": self.handle_s3_object_upload,
+            "/api/s3/objects/delete": self.handle_s3_object_delete,
+            "/api/s3/buckets/delete": self.handle_s3_bucket_delete,
             "/api/account/status": self.handle_account_status,
             "/api/account/update-profile": self.handle_account_update_profile,
             "/api/account/change-password": self.handle_account_change_password,
@@ -1608,6 +1875,108 @@ class NimbusHandler(SimpleHTTPRequestHandler):
         conn.close()
         self._send_json({"ok": True, "vms": vms})
 
+    def handle_s3_object_upload(self, data: dict):
+        email = data.get("email")
+        project_id = data.get("projectId")
+        bucket_name = (data.get("bucketName") or "").strip()
+        object_key = (data.get("key") or "").strip().lstrip("/")
+        content_type = (data.get("contentType") or "application/octet-stream").strip() or "application/octet-stream"
+        encoded_content = data.get("contentBase64") or ""
+
+        if not object_key:
+            self._send_json({"ok": False, "message": "Object key is required"}, 400)
+            return
+        if object_key.endswith("/"):
+            self._send_json({"ok": False, "message": "Object key must include a file name"}, 400)
+            return
+        if not encoded_content:
+            self._send_json({"ok": False, "message": "File content is required"}, 400)
+            return
+        if "," in encoded_content:
+            encoded_content = encoded_content.split(",", 1)[1]
+        try:
+            content = base64.b64decode(encoded_content, validate=True)
+        except (ValueError, binascii.Error):
+            self._send_json({"ok": False, "message": "Invalid file content"}, 400)
+            return
+        if len(content) > 25 * 1024 * 1024:
+            self._send_json({"ok": False, "message": "Upload limit is 25 MB per object from the dashboard"}, 413)
+            return
+
+        conn, user, _resource, error = self._with_bucket_resource(email, project_id, bucket_name)
+        if error:
+            self._send_json(error, error.get("status", 400))
+            return
+        conn.close()
+        try:
+            put_s3_object(bucket_name, object_key, content, content_type)
+            put_s3_object_tags(
+                bucket_name,
+                object_key,
+                {
+                    "owner": user["email"],
+                    "project": str(project_id),
+                    "bucket": bucket_name,
+                    "nimbus_owner_email": user["email"],
+                    "nimbus_project_id": str(project_id),
+                    "nimbus_bucket": bucket_name,
+                },
+            )
+            objects = list_s3_objects(bucket_name)
+        except RuntimeError as s3_error:
+            self._send_json({"ok": False, "message": str(s3_error)}, 502)
+            return
+        self._send_json({"ok": True, "objects": objects})
+
+    def handle_s3_object_delete(self, data: dict):
+        email = data.get("email")
+        project_id = data.get("projectId")
+        bucket_name = (data.get("bucketName") or "").strip()
+        object_key = (data.get("key") or "").strip()
+        if not object_key:
+            self._send_json({"ok": False, "message": "Object key is required"}, 400)
+            return
+
+        conn, _user, _resource, error = self._with_bucket_resource(email, project_id, bucket_name)
+        if error:
+            self._send_json(error, error.get("status", 400))
+            return
+        conn.close()
+        try:
+            delete_s3_object(bucket_name, object_key)
+            objects = list_s3_objects(bucket_name)
+        except RuntimeError as s3_error:
+            self._send_json({"ok": False, "message": str(s3_error)}, 502)
+            return
+        self._send_json({"ok": True, "objects": objects})
+
+    def handle_s3_bucket_delete(self, data: dict):
+        email = data.get("email")
+        project_id = data.get("projectId")
+        bucket_name = (data.get("bucketName") or "").strip()
+
+        conn, user, _resource, error = self._with_bucket_resource(email, project_id, bucket_name)
+        if error:
+            self._send_json(error, error.get("status", 400))
+            return
+        try:
+            delete_s3_bucket(bucket_name)
+        except RuntimeError as s3_error:
+            conn.close()
+            self._send_json({"ok": False, "message": str(s3_error)}, 502)
+            return
+        conn.execute(
+            """
+            DELETE FROM resources
+            WHERE user_id = ? AND project_id = ? AND resource_type = 'object-storage' AND name = ?
+            """,
+            (user["id"], project_id, bucket_name),
+        )
+        conn.commit()
+        resources = serialize_resources(conn, user["id"], int(project_id), "object-storage")
+        conn.close()
+        self._send_json({"ok": True, "resources": resources})
+
     def handle_resource_create(self, data: dict):
         email = data.get("email")
         project_id = data.get("projectId")
@@ -1636,6 +2005,47 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             conn.close()
             self._send_json({"ok": False, "message": "Project not found"}, 404)
             return
+        existing_resource = conn.execute(
+            """
+            SELECT id FROM resources
+            WHERE user_id = ? AND project_id = ? AND resource_type = ? AND name = ?
+            """,
+            (user["id"], project_id, resource_type, name),
+        ).fetchone()
+        if existing_resource:
+            conn.close()
+            self._send_json({"ok": False, "message": "Resource with this name already exists in selected project"}, 409)
+            return
+        if resource_type == "object-storage":
+            bucket_error = validate_s3_bucket_name(name)
+            if bucket_error:
+                conn.close()
+                self._send_json({"ok": False, "message": bucket_error}, 400)
+                return
+            bucket_error = create_s3_bucket(name)
+            if bucket_error:
+                conn.close()
+                self._send_json({"ok": False, "message": bucket_error}, 502)
+                return
+            try:
+                put_s3_bucket_tags(
+                    name,
+                    {
+                        "owner": user["email"],
+                        "project": str(project_id),
+                        "bucket": name,
+                        "nimbus_owner_email": user["email"],
+                        "nimbus_project_id": str(project_id),
+                    },
+                )
+            except RuntimeError as s3_error:
+                try:
+                    delete_s3_bucket(name)
+                except RuntimeError:
+                    pass
+                conn.close()
+                self._send_json({"ok": False, "message": str(s3_error)}, 502)
+                return
         try:
             conn.execute(
                 """
