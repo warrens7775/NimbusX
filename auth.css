@@ -3451,6 +3451,132 @@ body.dashboard-page::before {
   color: inherit;
 }
 
+/* Admin login is unauthenticated, so keep it independent from dashboard layout chrome. */
+.dashboard-page.admin-page .admin-login-shell {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(5, 7, 12, 0.94), rgba(6, 18, 34, 0.84)),
+    url("https://images.pexels.com/photos/325229/pexels-photo-325229.jpeg?auto=compress&cs=tinysrgb&w=1800");
+  background-size: cover;
+  background-position: center;
+}
+
+.dashboard-page.admin-page .admin-login-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(34, 211, 238, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(245, 158, 11, 0.07) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.88), transparent 78%);
+}
+
+.dashboard-page.admin-page .admin-login-shell .auth-card {
+  width: min(440px, 100%);
+  padding: clamp(1.35rem, 4vw, 2rem);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  color: #e5eefc;
+  background: rgba(15, 31, 56, 0.94);
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(18px);
+}
+
+.dashboard-page.admin-page .admin-login-shell .auth-card:hover {
+  transform: none;
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.42);
+}
+
+.dashboard-page.admin-page .admin-login-shell .brand {
+  margin-bottom: 1.4rem;
+  color: #f8fafc;
+}
+
+.dashboard-page.admin-page .admin-login-shell .brand-mark {
+  color: #07111f;
+  background: #67e8f9;
+}
+
+.dashboard-page.admin-page .admin-login-shell h1 {
+  margin: 0 0 0.45rem;
+  color: #f8fafc;
+  font-size: clamp(1.55rem, 4vw, 2rem);
+  line-height: 1.1;
+}
+
+.dashboard-page.admin-page .admin-login-shell p {
+  color: #9fb2d8;
+}
+
+.dashboard-page.admin-page .admin-login-shell form {
+  margin-top: 1.35rem;
+  gap: 0.95rem;
+}
+
+.dashboard-page.admin-page .admin-login-shell label {
+  color: #dbe7fb;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.dashboard-page.admin-page .admin-login-shell input {
+  min-height: 48px;
+  color: #f8fafc;
+  background: rgba(8, 17, 31, 0.78);
+  border-color: rgba(96, 130, 189, 0.56);
+  border-radius: 8px;
+}
+
+.dashboard-page.admin-page .admin-login-shell input::placeholder {
+  color: #7486a8;
+}
+
+.dashboard-page.admin-page .admin-login-shell input:focus {
+  outline: 2px solid rgba(103, 232, 249, 0.45);
+  border-color: #67e8f9;
+}
+
+.dashboard-page.admin-page .admin-login-shell .btn {
+  min-height: 48px;
+  margin-top: 0.25rem;
+  color: #07111f;
+  background: #67e8f9;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.dashboard-page.admin-page .admin-login-shell .btn:hover,
+.dashboard-page.admin-page .admin-login-shell .btn:focus-visible {
+  color: #07111f;
+  background: #22d3ee;
+  box-shadow: 0 16px 34px rgba(34, 211, 238, 0.24);
+  transform: translateY(-1px);
+}
+
+.dashboard-page.admin-page .admin-login-shell .form-message {
+  min-height: 1.25rem;
+  color: #fca5a5;
+}
+
+.dashboard-page.admin-page .admin-login-shell .back {
+  color: #c7d2fe;
+  font-weight: 700;
+}
+
+.dashboard-page.admin-page .admin-login-shell .back:hover,
+.dashboard-page.admin-page .admin-login-shell .back:focus-visible {
+  color: #67e8f9;
+}
+
 @media (max-width: 1120px) {
   .dashboard-page.admin-page .admin-overview-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
