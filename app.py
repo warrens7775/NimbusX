@@ -1143,6 +1143,7 @@ class NimbusHandler(SimpleHTTPRequestHandler):
     def handle_admin_login(self, data: dict):
         email = (data.get("email") or "").strip().lower()
         password = (data.get("password") or "").strip()
+        twofa_code = (data.get("twoFactorCode") or "").strip()
         if not email or not password:
             self._send_json({"ok": False, "message": "Email and password are required"}, 400)
             return
@@ -1163,6 +1164,22 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             conn.close()
             self._send_json({"ok": False, "message": "This account cannot access the admin console"}, 403)
             return
+        if user["twofa_enabled"] == 1:
+            if not twofa_code:
+                conn.close()
+                self._send_json(
+                    {
+                        "ok": False,
+                        "requires2FA": True,
+                        "message": "Enter the 6-digit code from your authenticator app",
+                    },
+                    401,
+                )
+                return
+            if not verify_totp_code(user["twofa_secret"], twofa_code):
+                conn.close()
+                self._send_json({"ok": False, "message": "Invalid authenticator code"}, 401)
+                return
 
         expires_at = int(time.time()) + ADMIN_SESSION_TTL
         token = _make_admin_session(user["id"], expires_at)

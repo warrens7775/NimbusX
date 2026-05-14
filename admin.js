@@ -594,11 +594,58 @@ async function updateLeadAssignee(leadId, assigneeId) {
   await refreshAll();
 }
 
+function openAdminTwoFactorModal() {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "project-modal-overlay";
+    overlay.innerHTML = `
+      <div class="project-modal two-factor-modal" role="dialog" aria-modal="true" aria-label="Authenticator code">
+        <h3>Two-Factor Authentication</h3>
+        <p class="project-modal-message">Enter the 6-digit code from your authenticator app.</p>
+        <label class="two-factor-field">
+          Authenticator code
+          <input id="adminTwoFactorCode" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" />
+        </label>
+        <div class="project-modal-actions">
+          <button type="button" class="project-modal-btn ghost" data-action="cancel">Cancel</button>
+          <button type="button" class="project-modal-btn primary" data-action="confirm">Verify</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const input = overlay.querySelector("#adminTwoFactorCode");
+    const close = (value) => {
+      overlay.remove();
+      resolve(value);
+    };
+
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) close("");
+    });
+    overlay.querySelector('[data-action="cancel"]').addEventListener("click", () => close(""));
+    overlay.querySelector('[data-action="confirm"]').addEventListener("click", () => close(input.value.trim()));
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") close(input.value.trim());
+      if (event.key === "Escape") close("");
+    });
+    input.focus();
+  });
+}
+
 adminLoginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const email = document.getElementById("adminEmail").value.trim();
   const password = document.getElementById("adminPassword").value;
-  const result = await api("/api/admin/login", "POST", { email, password });
+  let result = await api("/api/admin/login", "POST", { email, password });
+  if (result.requires2FA) {
+    const twoFactorCode = await openAdminTwoFactorModal();
+    if (!twoFactorCode.trim()) {
+      adminLoginMessage.textContent = "Authenticator code is required";
+      return;
+    }
+    result = await api("/api/admin/login", "POST", { email, password, twoFactorCode });
+  }
   adminLoginMessage.textContent = result.message || "Login failed";
   if (!result.ok) return;
   state.admin = result.admin;
