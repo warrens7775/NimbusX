@@ -28,9 +28,19 @@ const state = {
   users: [],
   roles: [],
   audit: [],
+  leads: [],
+  leadAssignees: [],
   selectedRoleId: null,
 };
 
+const ADMIN_PAGE_ACCESS = {
+  overview: { href: "admin", permission: "access_admin_console" },
+  users: { href: "admin-users", permission: "view_users" },
+  groups: { href: "admin-groups", permission: "view_roles" },
+  leads: { href: "admin-leads", permission: "view_leads" },
+};
+
+const adminPage = document.body.dataset.adminPage || "overview";
 const adminLoginShell = document.getElementById("adminLoginShell");
 const adminApp = document.getElementById("adminApp");
 const adminSummary = document.getElementById("adminSummary");
@@ -40,7 +50,9 @@ const logoutButton = document.getElementById("logoutButton");
 const overviewGrid = document.getElementById("overviewGrid");
 const usersTableBody = document.getElementById("usersTableBody");
 const auditTableBody = document.getElementById("auditTableBody");
+const leadsTableBody = document.getElementById("leadsTableBody");
 const userSearchInput = document.getElementById("userSearchInput");
+const leadSearchInput = document.getElementById("leadSearchInput");
 const groupSearchInput = document.getElementById("groupSearchInput");
 const groupPermissionGrid = document.getElementById("groupPermissionGrid");
 const groupCreateForm = document.getElementById("groupCreateForm");
@@ -51,10 +63,11 @@ const groupCountLabel = document.getElementById("groupCountLabel");
 const selectedGroupTitle = document.getElementById("selectedGroupTitle");
 const selectedGroupDescription = document.getElementById("selectedGroupDescription");
 const selectedGroupContent = document.getElementById("selectedGroupContent");
-const groupsJumpButton = document.getElementById("groupsJumpButton");
 const adminLoginForm = document.getElementById("adminLoginForm");
 const adminLoginMessage = document.getElementById("adminLoginMessage");
-const groupsSection = document.getElementById("groupsSection");
+const adminViewButtons = [...document.querySelectorAll("[data-admin-view-button]")];
+const adminToggle = document.getElementById("adminToggle");
+const adminMenuList = document.getElementById("adminMenuList");
 
 function can(permission) {
   return state.permissions.has(permission);
@@ -75,10 +88,37 @@ function setVisible(loggedIn) {
   adminApp.hidden = !loggedIn;
 }
 
-function setGroupsVisible(visible) {
-  groupsSection.hidden = !visible;
-  groupsJumpButton.setAttribute("aria-expanded", String(visible));
-  groupsJumpButton.textContent = visible ? "Hide groups" : "Groups";
+function finishAdminBoot() {
+  document.body.dataset.adminLoading = "false";
+}
+
+function canAccessAdminPage(page) {
+  const config = ADMIN_PAGE_ACCESS[page];
+  return config ? can(config.permission) : false;
+}
+
+function firstAllowedAdminPage() {
+  return Object.entries(ADMIN_PAGE_ACCESS).find(([page]) => canAccessAdminPage(page))?.[1] || ADMIN_PAGE_ACCESS.overview;
+}
+
+function enforceCurrentPageAccess() {
+  if (canAccessAdminPage(adminPage)) return true;
+  const fallback = firstAllowedAdminPage();
+  if (fallback.href && !window.location.pathname.endsWith(`/${fallback.href}`)) {
+    window.location.replace(fallback.href);
+  }
+  return false;
+}
+
+function syncAdminNav() {
+  adminViewButtons.forEach((button) => {
+    const page = button.dataset.adminViewButton;
+    const allowed = canAccessAdminPage(page);
+    button.hidden = !allowed;
+    const active = allowed && page === adminPage;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "page" : "false");
+  });
 }
 
 function escapeHtml(value) {
@@ -105,6 +145,7 @@ function formatDetails(details) {
 }
 
 function renderPermissionChecks(container, selected = new Set(), prefix = "perm") {
+  if (!container) return;
   container.innerHTML = PERMISSIONS.map(([key, label]) => {
     const checked = selected.has(key) ? "checked" : "";
     return `
@@ -117,10 +158,12 @@ function renderPermissionChecks(container, selected = new Set(), prefix = "perm"
 }
 
 function selectedPermissions(container) {
+  if (!container) return [];
   return [...container.querySelectorAll("[data-permission-key]")].filter((input) => input.checked).map((input) => input.dataset.permissionKey);
 }
 
 function renderOverview() {
+  if (!overviewGrid) return;
   const overview = state.overview || {};
   const counts = overview.counts || {};
   const stats = [
@@ -146,11 +189,12 @@ function renderOverview() {
 }
 
 function renderUsers() {
+  if (!usersTableBody) return;
   if (!can("view_users")) {
     usersTableBody.innerHTML = `<tr><td colspan="5"><div class="admin-empty">This role cannot view user accounts.</div></td></tr>`;
     return;
   }
-  const query = (userSearchInput.value || "").trim().toLowerCase();
+  const query = (userSearchInput?.value || "").trim().toLowerCase();
   const roleOptions = state.roles
     .map((role) => `<option value="${role.id}">${escapeHtml(role.name)}</option>`)
     .join("");
@@ -204,6 +248,7 @@ function renderUsers() {
 }
 
 function renderAudit() {
+  if (!auditTableBody) return;
   if (!can("view_audit_logs")) {
     auditTableBody.innerHTML = `<tr><td colspan="5"><div class="admin-empty">This role cannot view audit logs.</div></td></tr>`;
     return;
@@ -228,24 +273,92 @@ function renderAudit() {
     .join("");
 }
 
+function renderLeads() {
+  if (!leadsTableBody) return;
+  if (!can("view_leads")) {
+    leadsTableBody.innerHTML = `<tr><td colspan="10"><div class="admin-empty">This role cannot view leads.</div></td></tr>`;
+    return;
+  }
+  const query = (leadSearchInput?.value || "").trim().toLowerCase();
+  const filtered = state.leads.filter((lead) => {
+    const haystack = `${lead.email} ${lead.company} ${lead.phone} ${lead.service} ${lead.workload} ${lead.budget} ${lead.status} ${lead.assignedName} ${lead.assignedEmail} ${lead.message}`.toLowerCase();
+    return haystack.includes(query);
+  });
+  if (!filtered.length) {
+    leadsTableBody.innerHTML = `<tr><td colspan="10"><div class="admin-empty">No leads match this search.</div></td></tr>`;
+    return;
+  }
+  leadsTableBody.innerHTML = filtered
+    .map(
+      (lead) => {
+        const status = lead.status || "new";
+        const assigneeOptions = state.leadAssignees
+          .map((user) => {
+            const selected = Number(lead.assignedUserId || 0) === Number(user.id) ? "selected" : "";
+            return `<option value="${user.id}" ${selected}>${escapeHtml(user.fullName || user.email)} (${escapeHtml(user.roleName || "lead")})</option>`;
+          })
+          .join("");
+        return `
+        <tr>
+          <td>
+            <strong>${escapeHtml(lead.company || "-")}</strong>
+            <div class="admin-note">ID ${escapeHtml(lead.id)}</div>
+          </td>
+          <td>
+            <a href="mailto:${escapeHtml(lead.email)}">${escapeHtml(lead.email)}</a>
+            <div class="admin-note">${escapeHtml(lead.phone || "")}</div>
+          </td>
+          <td>${escapeHtml(lead.service || "-")}</td>
+          <td>${escapeHtml(lead.workload || "-")}</td>
+          <td>${escapeHtml(lead.budget || "-")}</td>
+          <td>
+            <select data-lead-status="${lead.id}" ${can("manage_leads") ? "" : "disabled"}>
+              <option value="new" ${status === "new" ? "selected" : ""}>New</option>
+              <option value="inprogress" ${status === "inprogress" ? "selected" : ""}>In Progress</option>
+              <option value="accept" ${status === "accept" ? "selected" : ""}>Accept</option>
+              <option value="reject" ${status === "reject" ? "selected" : ""}>Reject</option>
+            </select>
+          </td>
+          <td>
+            <select data-lead-assignee="${lead.id}" ${can("manage_leads") ? "" : "disabled"}>
+              <option value="">Unassigned</option>
+              ${assigneeOptions}
+            </select>
+            <div class="admin-note">${escapeHtml(lead.assignedEmail || "")}</div>
+          </td>
+          <td>${escapeHtml(lead.message || "-")}</td>
+          <td>${escapeHtml(lead.createdAt || "")}</td>
+          <td>
+            <div class="admin-inline-actions">
+              <button class="admin-button danger" type="button" data-action="delete-lead" data-lead-id="${lead.id}" ${can("manage_leads") ? "" : "disabled"}>Delete</button>
+            </div>
+          </td>
+        </tr>
+      `;
+      },
+    )
+    .join("");
+}
+
 function renderGroupCreatePermissions() {
   renderPermissionChecks(groupPermissionGrid, new Set());
 }
 
 function renderRoles() {
+  if (!groupListRail || !selectedGroupContent) return;
   if (!can("view_roles")) {
     groupListRail.innerHTML = `<div class="admin-empty">This role cannot view groups.</div>`;
     selectedGroupContent.innerHTML = `<div class="admin-empty">This role cannot view groups.</div>`;
     return;
   }
-  const query = (groupSearchInput.value || "").trim().toLowerCase();
+  const query = (groupSearchInput?.value || "").trim().toLowerCase();
   const filtered = state.roles.filter((role) => `${role.name} ${role.description}`.toLowerCase().includes(query));
-  groupCountLabel.textContent = String(filtered.length);
+  if (groupCountLabel) groupCountLabel.textContent = String(filtered.length);
 
   if (!filtered.length) {
     groupListRail.innerHTML = `<div class="admin-empty">No groups match this search.</div>`;
-    selectedGroupTitle.textContent = "Select a group";
-    selectedGroupDescription.textContent = "Choose a group from the buttons on the left to edit it here.";
+    if (selectedGroupTitle) selectedGroupTitle.textContent = "Select a group";
+    if (selectedGroupDescription) selectedGroupDescription.textContent = "Choose a group from the buttons on the left to edit it here.";
     selectedGroupContent.innerHTML = `<div class="admin-empty">No group selected.</div>`;
     return;
   }
@@ -271,8 +384,8 @@ function renderRoles() {
     return;
   }
 
-  selectedGroupTitle.textContent = role.name;
-  selectedGroupDescription.textContent = role.description || "No description";
+  if (selectedGroupTitle) selectedGroupTitle.textContent = role.name;
+  if (selectedGroupDescription) selectedGroupDescription.textContent = role.description || "No description";
   selectedGroupContent.innerHTML = `
     <div class="admin-form">
       <label>
@@ -300,43 +413,56 @@ function renderRoles() {
 
 function syncHeader() {
   if (!state.admin) return;
-  adminSummary.textContent = `${state.admin.fullName} · ${state.admin.email}`;
-  adminRoleBadge.textContent = state.admin.roleName || "Admin";
+  if (adminSummary) adminSummary.textContent = `${state.admin.fullName} · ${state.admin.email}`;
+  if (adminRoleBadge) adminRoleBadge.textContent = state.admin.roleName || "Admin";
 }
 
 async function refreshAll() {
-  const requests = [api("/api/admin/overview")];
-  if (can("view_users")) requests.push(api("/api/admin/users"));
-  if (can("view_roles")) requests.push(api("/api/admin/roles"));
-  if (can("view_audit_logs")) requests.push(api("/api/admin/audit"));
-
-  const [overviewRes, usersRes, rolesRes, auditRes] = await Promise.all(requests);
-  if (overviewRes.ok) state.overview = overviewRes.overview;
+  const [overviewRes, usersRes, rolesRes, auditRes, leadsRes] = await Promise.all([
+    overviewGrid ? api("/api/admin/overview") : Promise.resolve(null),
+    usersTableBody && can("view_users") ? api("/api/admin/users") : Promise.resolve(null),
+    (usersTableBody || groupListRail) && can("view_roles") ? api("/api/admin/roles") : Promise.resolve(null),
+    auditTableBody && can("view_audit_logs") ? api("/api/admin/audit") : Promise.resolve(null),
+    leadsTableBody && can("view_leads") ? api("/api/admin/leads") : Promise.resolve(null),
+  ]);
+  if (overviewRes?.ok) state.overview = overviewRes.overview;
   state.users = can("view_users") && usersRes && usersRes.ok ? usersRes.users || [] : [];
   state.roles = can("view_roles") && rolesRes && rolesRes.ok ? rolesRes.roles || [] : [];
   state.audit = can("view_audit_logs") && auditRes && auditRes.ok ? auditRes.logs || [] : [];
+  state.leads = can("view_leads") && leadsRes && leadsRes.ok ? leadsRes.leads || [] : [];
+  state.leadAssignees = can("view_leads") && leadsRes && leadsRes.ok ? leadsRes.assignees || [] : [];
   renderOverview();
   renderUsers();
   renderRoles();
   renderAudit();
+  renderLeads();
   renderGroupCreatePermissions();
 }
 
 async function loadSession() {
-  const result = await api("/api/admin/me");
-  if (!result.ok) {
-    setVisible(false);
-    return;
+  try {
+    const result = await api("/api/admin/me");
+    if (!result.ok) {
+      setVisible(false);
+      return;
+    }
+    state.admin = result.admin;
+    state.permissions = new Set(result.admin.permissions || []);
+    syncHeader();
+    setVisible(true);
+    syncAdminNav();
+    if (!enforceCurrentPageAccess()) return;
+    if (groupCreateForm) {
+      groupCreateForm.querySelectorAll("input, textarea, button").forEach((el) => {
+        if (el.type === "submit") el.disabled = !can("manage_roles");
+        else if (el.tagName !== "BUTTON") el.disabled = !can("manage_roles");
+      });
+    }
+    finishAdminBoot();
+    await refreshAll();
+  } finally {
+    finishAdminBoot();
   }
-  state.admin = result.admin;
-  state.permissions = new Set(result.admin.permissions || []);
-  syncHeader();
-  setVisible(true);
-  groupCreateForm.querySelectorAll("input, textarea, button").forEach((el) => {
-    if (el.type === "submit") el.disabled = !can("manage_roles");
-    else if (el.tagName !== "BUTTON") el.disabled = !can("manage_roles");
-  });
-  await refreshAll();
 }
 
 async function saveUserRole(userId) {
@@ -426,6 +552,48 @@ async function deleteRole(roleId) {
   await refreshAll();
 }
 
+async function deleteLead(leadId) {
+  const lead = state.leads.find((entry) => entry.id === Number(leadId));
+  if (!lead) return;
+  const confirmed = window.confirm(`Delete the lead from "${lead.company || lead.email}"?`);
+  if (!confirmed) return;
+  const result = await api("/api/admin/leads/delete", "POST", { leadId: Number(leadId) });
+  if (!result.ok) {
+    window.alert(result.message || "Unable to delete lead.");
+    return;
+  }
+  await refreshAll();
+}
+
+async function updateLeadStatus(leadId, status) {
+  if (!can("manage_leads")) return;
+  const result = await api("/api/admin/leads/status", "POST", {
+    leadId: Number(leadId),
+    status,
+  });
+  if (!result.ok) {
+    window.alert(result.message || "Unable to update lead status.");
+    await refreshAll();
+    return;
+  }
+  const lead = state.leads.find((entry) => entry.id === Number(leadId));
+  if (lead) lead.status = status;
+}
+
+async function updateLeadAssignee(leadId, assigneeId) {
+  if (!can("manage_leads")) return;
+  const result = await api("/api/admin/leads/assign", "POST", {
+    leadId: Number(leadId),
+    assigneeId: assigneeId ? Number(assigneeId) : 0,
+  });
+  if (!result.ok) {
+    window.alert(result.message || "Unable to update lead assignment.");
+    await refreshAll();
+    return;
+  }
+  await refreshAll();
+}
+
 adminLoginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const email = document.getElementById("adminEmail").value.trim();
@@ -437,31 +605,43 @@ adminLoginForm.addEventListener("submit", async (event) => {
   state.permissions = new Set(result.admin.permissions || []);
   syncHeader();
   setVisible(true);
+  syncAdminNav();
+  if (!enforceCurrentPageAccess()) return;
+  finishAdminBoot();
   await refreshAll();
 });
 
-refreshButton.addEventListener("click", refreshAll);
+refreshButton?.addEventListener("click", refreshAll);
 
-logoutButton.addEventListener("click", async () => {
+logoutButton?.addEventListener("click", async () => {
   await api("/api/admin/logout", "POST", {});
   window.location.reload();
 });
 
-userSearchInput.addEventListener("input", renderUsers);
-groupSearchInput.addEventListener("input", () => {
+userSearchInput?.addEventListener("input", renderUsers);
+leadSearchInput?.addEventListener("input", renderLeads);
+leadsTableBody?.addEventListener("change", async (event) => {
+  const statusSelect = event.target.closest("[data-lead-status]");
+  if (statusSelect) {
+    await updateLeadStatus(statusSelect.dataset.leadStatus, statusSelect.value);
+    return;
+  }
+  const assigneeSelect = event.target.closest("[data-lead-assignee]");
+  if (assigneeSelect) {
+    await updateLeadAssignee(assigneeSelect.dataset.leadAssignee, assigneeSelect.value);
+  }
+});
+adminToggle?.addEventListener("click", () => {
+  if (!adminMenuList) return;
+  const open = adminMenuList.classList.toggle("open");
+  adminToggle.setAttribute("aria-expanded", String(open));
+});
+groupSearchInput?.addEventListener("input", () => {
   state.selectedRoleId = null;
   renderRoles();
 });
 
-groupsJumpButton.addEventListener("click", () => {
-  const nextVisible = groupsSection.hidden;
-  setGroupsVisible(nextVisible);
-  if (nextVisible) {
-    groupsSection.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-});
-
-groupCreateForm.addEventListener("submit", async (event) => {
+groupCreateForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const payload = {
     name: groupName.value.trim(),
@@ -513,8 +693,14 @@ document.addEventListener("click", async (event) => {
   const deleteRoleButton = event.target.closest('[data-action="delete-role"][data-role-id]');
   if (deleteRoleButton) {
     await deleteRole(deleteRoleButton.dataset.roleId);
+    return;
+  }
+
+  const deleteLeadButton = event.target.closest('[data-action="delete-lead"][data-lead-id]');
+  if (deleteLeadButton) {
+    await deleteLead(deleteLeadButton.dataset.leadId);
   }
 });
 
 loadSession();
-setGroupsVisible(false);
+syncAdminNav();
