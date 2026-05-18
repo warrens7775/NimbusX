@@ -2367,6 +2367,10 @@ body.admin-page {
   color: #fff;
 }
 
+.admin-activity-card {
+  margin-top: 1rem;
+}
+
 .admin-subgrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2419,6 +2423,9 @@ body.admin-page {
 
 .admin-button,
 .admin-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid rgba(96, 130, 189, 0.45);
   background: rgba(24, 48, 84, 0.82);
   color: var(--text);
@@ -2426,6 +2433,7 @@ body.admin-page {
   padding: 0.68rem 0.9rem;
   font-weight: 700;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .admin-button.primary {
@@ -2439,9 +2447,20 @@ body.admin-page {
   color: #fecdd3;
 }
 
+.admin-button.active {
+  background: rgba(79, 140, 255, 0.22);
+  border-color: rgba(114, 162, 255, 0.58);
+  color: #ffffff;
+}
+
 .admin-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.admin-view-panel,
+.admin-page-section {
+  margin-top: 1rem;
 }
 
 .admin-table-wrap {
@@ -3056,4 +3075,566 @@ body.dashboard-page::before {
 
 .dashboard-page .scroll-progress {
   background: linear-gradient(90deg, var(--primary), var(--accent));
+}
+
+.dashboard-page.admin-page .admin-login-shell {
+  width: min(540px, calc(100% - 2rem));
+  margin: 6vh auto 0;
+}
+
+.dashboard-page.admin-page[data-admin-loading="true"] .admin-login-shell,
+.dashboard-page.admin-page[data-admin-loading="true"] #adminApp {
+  visibility: hidden;
+}
+
+.dashboard-page.admin-page[data-admin-loading="true"] .dash-layout {
+  opacity: 0;
+}
+
+.dashboard-page.admin-page .admin-dashboard-topbar {
+  justify-content: flex-end;
+}
+
+.dashboard-page.admin-page .admin-dashboard-summary {
+  margin: 0.28rem 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.92rem;
+}
+
+.dashboard-page.admin-page .admin-page-section {
+  margin-top: 1rem;
+}
+
+.dashboard-page.admin-page .admin-layout {
+  display: block;
+  margin-top: 1rem;
+}
+
+.dashboard-page.admin-page .admin-card,
+.dashboard-page.admin-page .selected-group-panel,
+.dashboard-page.admin-page .group-rail {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(217, 224, 234, 0.95);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.dashboard-page.admin-page .admin-card {
+  padding: 1rem;
+}
+
+.dashboard-page.admin-page .admin-card h2,
+.dashboard-page.admin-page .admin-card h3,
+.dashboard-page.admin-page .group-rail strong,
+.dashboard-page.admin-page .admin-table td strong {
+  color: var(--navy);
+}
+
+.dashboard-page.admin-page .admin-card p,
+.dashboard-page.admin-page .admin-muted,
+.dashboard-page.admin-page .admin-note,
+.dashboard-page.admin-page .group-list-button span {
+  color: var(--muted);
+}
+
+.dashboard-page.admin-page .admin-overview-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.dashboard-page.admin-page .admin-stat {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(217, 224, 234, 0.95);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.dashboard-page.admin-page .admin-stat .label {
+  color: var(--muted);
+}
+
+.dashboard-page.admin-page .admin-stat .value {
+  color: var(--navy);
+}
+
+.dashboard-page.admin-page .admin-button {
+  color: #3f3f46;
+  background: #ffffff;
+  border-color: var(--line);
+  border-radius: 8px;
+}
+
+.dashboard-page.admin-page .admin-button:hover,
+.dashboard-page.admin-page .admin-button:focus-visible,
+.dashboard-page.admin-page .admin-button.active {
+  color: var(--primary);
+  background: rgba(8, 145, 178, 0.08);
+  border-color: rgba(8, 145, 178, 0.26);
+}
+
+.dashboard-page.admin-page .admin-button.primary {
+  color: #ffffff;
+  background: var(--primary);
+  border-color: transparent;
+}
+
+.dashboard-page.admin-page .admin-button.danger {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.22);
+}
+
+.dashboard-page.admin-page .admin-badge {
+  color: #075985;
+  background: rgba(8, 145, 178, 0.1);
+  border-color: rgba(8, 145, 178, 0.24);
+}
+
+.dashboard-page.admin-page .admin-table-wrap {
+  border-color: rgba(217, 224, 234, 0.92);
+  background: #ffffff;
+}
+
+.dashboard-page.admin-page .admin-table th {
+  color: #52525b;
+  background: #f4f7fb;
+}
+
+.dashboard-page.admin-page .admin-table td {
+  color: #3f3f46;
+  border-bottom-color: rgba(217, 224, 234, 0.86);
+}
+
+.dashboard-page.admin-page .admin-toolbar input,
+.dashboard-page.admin-page .admin-toolbar select,
+.dashboard-page.admin-page .admin-form input,
+.dashboard-page.admin-page .admin-form textarea,
+.dashboard-page.admin-page .admin-table select,
+.dashboard-page.admin-page .admin-table input[type="text"] {
+  color: var(--text);
+  background: #ffffff;
+  border-color: var(--line);
+  border-radius: 8px;
+}
+
+.dashboard-page.admin-page .admin-form label,
+.dashboard-page.admin-page .permission-item span {
+  color: #3f3f46;
+}
+
+.dashboard-page.admin-page .group-list-button,
+.dashboard-page.admin-page .permission-item {
+  color: #3f3f46;
+  background: #ffffff;
+  border-color: rgba(217, 224, 234, 0.92);
+  border-radius: 8px;
+}
+
+.dashboard-page.admin-page .group-list-button:hover,
+.dashboard-page.admin-page .group-list-button.active,
+.dashboard-page.admin-page .permission-item:hover {
+  background: rgba(8, 145, 178, 0.08);
+  border-color: rgba(8, 145, 178, 0.2);
+}
+
+.dashboard-page.admin-page .admin-chip {
+  color: #52525b;
+  background: #f4f7fb;
+  border-color: rgba(217, 224, 234, 0.92);
+}
+
+.dashboard-page.admin-page .admin-chip.active {
+  color: #166534;
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.dashboard-page.admin-page .admin-chip.inactive {
+  color: #991b1b;
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.22);
+}
+
+.dashboard-page.admin-page .admin-empty {
+  color: var(--muted);
+  background: #f8fafc;
+  border-color: rgba(217, 224, 234, 0.92);
+}
+
+.dashboard-page .theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+  min-width: 88px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  background: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(16, 36, 62, 0.1);
+}
+
+.dashboard-page .theme-toggle:hover,
+.dashboard-page .theme-toggle:focus-visible {
+  color: var(--primary);
+  background: rgba(8, 145, 178, 0.08);
+  border-color: rgba(8, 145, 178, 0.28);
+}
+
+.dashboard-page .theme-toggle-icon {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 999px;
+  color: #ffffff;
+  background: var(--navy);
+  font-size: 0.88rem;
+  line-height: 1;
+}
+
+.dashboard-page .theme-toggle-label {
+  font-size: 0.82rem;
+}
+
+.dashboard-page[data-theme="dark"] {
+  --bg: #07111f;
+  --text: #e5eefc;
+  --muted: #9fb2d8;
+  --line: rgba(96, 130, 189, 0.42);
+  --paper: #0f1f38;
+  --surface: #07111f;
+  --navy: #f8fafc;
+  --primary: #22d3ee;
+  --primary-strong: #0891b2;
+  --accent: #f59e0b;
+  --shadow: 0 18px 45px rgba(2, 6, 23, 0.36);
+  color: var(--text);
+  background:
+    linear-gradient(rgba(7, 17, 31, 0.82), rgba(7, 17, 31, 0.82)),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(245, 158, 11, 0.06) 1px, transparent 1px),
+    var(--surface);
+}
+
+.dashboard-page[data-theme="dark"]::before {
+  background:
+    linear-gradient(90deg, rgba(2, 6, 23, 0.95), rgba(15, 31, 56, 0.7)),
+    url("https://images.pexels.com/photos/325229/pexels-photo-325229.jpeg?auto=compress&cs=tinysrgb&w=1800");
+  background-size: cover;
+  background-position: center;
+}
+
+.dashboard-page[data-theme="dark"] .dash-sidebar,
+.dashboard-page[data-theme="dark"] .empty-state,
+.dashboard-page[data-theme="dark"] .vm-list-section,
+.dashboard-page[data-theme="dark"] .projects-table,
+.dashboard-page[data-theme="dark"] .s3-bucket-toolbar,
+.dashboard-page[data-theme="dark"] .s3-manager,
+.dashboard-page[data-theme="dark"] .project-dropdown,
+.dashboard-page[data-theme="dark"] .row-menu-dropdown,
+.dashboard-page[data-theme="dark"] .profile-dropdown,
+.dashboard-page[data-theme="dark"].admin-page .admin-card,
+.dashboard-page[data-theme="dark"].admin-page .selected-group-panel,
+.dashboard-page[data-theme="dark"].admin-page .group-rail,
+.dashboard-page[data-theme="dark"].admin-page .admin-stat {
+  color: var(--text);
+  background: rgba(15, 31, 56, 0.94);
+  border-color: rgba(96, 130, 189, 0.42);
+  box-shadow: var(--shadow);
+}
+
+.dashboard-page[data-theme="dark"] .dash-sidebar {
+  border-right-color: rgba(96, 130, 189, 0.35);
+}
+
+.dashboard-page[data-theme="dark"] .brand,
+.dashboard-page[data-theme="dark"] h1,
+.dashboard-page[data-theme="dark"] .empty-state h2,
+.dashboard-page[data-theme="dark"] .s3-bucket-toolbar h2,
+.dashboard-page[data-theme="dark"] .s3-manager h2,
+.dashboard-page[data-theme="dark"].admin-page .admin-card h2,
+.dashboard-page[data-theme="dark"].admin-page .admin-card h3,
+.dashboard-page[data-theme="dark"].admin-page .group-rail strong,
+.dashboard-page[data-theme="dark"].admin-page .admin-table td strong,
+.dashboard-page[data-theme="dark"].admin-page .admin-stat .value {
+  color: #f8fafc;
+}
+
+.dashboard-page[data-theme="dark"] p,
+.dashboard-page[data-theme="dark"] label,
+.dashboard-page[data-theme="dark"] .project-label,
+.dashboard-page[data-theme="dark"] .project-default p,
+.dashboard-page[data-theme="dark"] .project-default small,
+.dashboard-page[data-theme="dark"] .caret,
+.dashboard-page[data-theme="dark"] .menu-caret,
+.dashboard-page[data-theme="dark"] .profile-email,
+.dashboard-page[data-theme="dark"] .project-modal-message,
+.dashboard-page[data-theme="dark"] .s3-upload-copy span,
+.dashboard-page[data-theme="dark"] .s3-manager-head p:last-child,
+.dashboard-page[data-theme="dark"] .s3-empty-objects,
+.dashboard-page[data-theme="dark"].admin-page .admin-muted,
+.dashboard-page[data-theme="dark"].admin-page .admin-note,
+.dashboard-page[data-theme="dark"].admin-page .group-list-button span,
+.dashboard-page[data-theme="dark"].admin-page .admin-stat .label {
+  color: var(--muted);
+}
+
+.dashboard-page[data-theme="dark"] input,
+.dashboard-page[data-theme="dark"] select,
+.dashboard-page[data-theme="dark"] .project-select,
+.dashboard-page[data-theme="dark"] .region-select,
+.dashboard-page[data-theme="dark"] .project-search input,
+.dashboard-page[data-theme="dark"] .profile-btn,
+.dashboard-page[data-theme="dark"] .project-action,
+.dashboard-page[data-theme="dark"] .project-modal-btn,
+.dashboard-page[data-theme="dark"] .s3-file-picker,
+.dashboard-page[data-theme="dark"] .theme-toggle,
+.dashboard-page[data-theme="dark"].admin-page .admin-button,
+.dashboard-page[data-theme="dark"].admin-page .admin-toolbar input,
+.dashboard-page[data-theme="dark"].admin-page .admin-toolbar select,
+.dashboard-page[data-theme="dark"].admin-page .admin-form input,
+.dashboard-page[data-theme="dark"].admin-page .admin-form textarea,
+.dashboard-page[data-theme="dark"].admin-page .admin-table select,
+.dashboard-page[data-theme="dark"].admin-page .admin-table input[type="text"] {
+  color: var(--text);
+  background: rgba(8, 17, 31, 0.92);
+  border-color: var(--line);
+}
+
+.dashboard-page[data-theme="dark"] .profile-dropdown a,
+.dashboard-page[data-theme="dark"] .profile-dropdown button,
+.dashboard-page[data-theme="dark"] .row-menu-dropdown button,
+.dashboard-page[data-theme="dark"] .project-option,
+.dashboard-page[data-theme="dark"] .menu-item,
+.dashboard-page[data-theme="dark"] .projects-row,
+.dashboard-page[data-theme="dark"] .tab,
+.dashboard-page[data-theme="dark"].admin-page .admin-table td,
+.dashboard-page[data-theme="dark"].admin-page .admin-form label,
+.dashboard-page[data-theme="dark"].admin-page .permission-item span,
+.dashboard-page[data-theme="dark"].admin-page .group-list-button,
+.dashboard-page[data-theme="dark"].admin-page .permission-item {
+  color: #dbe7fb;
+}
+
+.dashboard-page[data-theme="dark"] .projects-row.head,
+.dashboard-page[data-theme="dark"] .s3-object-head,
+.dashboard-page[data-theme="dark"].admin-page .admin-table th {
+  color: #cbd5e1;
+  background: rgba(8, 17, 31, 0.82);
+}
+
+.dashboard-page[data-theme="dark"] .projects-row,
+.dashboard-page[data-theme="dark"].admin-page .admin-table td {
+  border-bottom-color: rgba(96, 130, 189, 0.22);
+}
+
+.dashboard-page[data-theme="dark"].admin-page .admin-table-wrap,
+.dashboard-page[data-theme="dark"].admin-page .group-list-button,
+.dashboard-page[data-theme="dark"].admin-page .permission-item,
+.dashboard-page[data-theme="dark"].admin-page .admin-empty {
+  background: rgba(8, 17, 31, 0.58);
+  border-color: rgba(96, 130, 189, 0.32);
+}
+
+.dashboard-page[data-theme="dark"] .theme-toggle-icon {
+  color: #07111f;
+  background: #67e8f9;
+}
+
+.dashboard-page[data-theme="dark"] .menu-item.active,
+.dashboard-page[data-theme="dark"] .menu-item:hover,
+.dashboard-page[data-theme="dark"] .project-option.active,
+.dashboard-page[data-theme="dark"] .project-option:hover,
+.dashboard-page[data-theme="dark"] .projects-row.active,
+.dashboard-page[data-theme="dark"] .projects-row:hover,
+.dashboard-page[data-theme="dark"] .s3-bucket-row.active,
+.dashboard-page[data-theme="dark"] .s3-bucket-row:hover,
+.dashboard-page[data-theme="dark"].admin-page .admin-button.active,
+.dashboard-page[data-theme="dark"].admin-page .admin-button:hover,
+.dashboard-page[data-theme="dark"].admin-page .group-list-button.active,
+.dashboard-page[data-theme="dark"].admin-page .group-list-button:hover,
+.dashboard-page[data-theme="dark"].admin-page .permission-item:hover {
+  color: #e0f2fe;
+  background: rgba(34, 211, 238, 0.16);
+  border-color: rgba(103, 232, 249, 0.38);
+}
+
+.dashboard-page[data-theme="dark"] .tab.active,
+.dashboard-page[data-theme="dark"] .tab:hover {
+  color: #67e8f9;
+  background: transparent;
+  border-bottom-color: #67e8f9;
+}
+
+.dashboard-page[data-theme="dark"] .menu-item.active {
+  color: #07111f;
+  background: #67e8f9;
+  border-color: #67e8f9;
+}
+
+.dashboard-page[data-theme="dark"].admin-page .admin-button.active {
+  color: #07111f;
+  background: #67e8f9;
+  border-color: #67e8f9;
+}
+
+.dashboard-page[data-theme="dark"] .project-option.active,
+.dashboard-page[data-theme="dark"] .projects-row.active,
+.dashboard-page[data-theme="dark"] .s3-bucket-row.active,
+.dashboard-page[data-theme="dark"].admin-page .group-list-button.active {
+  color: #f8fafc;
+  background: rgba(8, 145, 178, 0.34);
+  border-color: rgba(103, 232, 249, 0.42);
+}
+
+.dashboard-page[data-theme="dark"] .menu-item.active span,
+.dashboard-page[data-theme="dark"].admin-page .admin-button.active span {
+  color: inherit;
+}
+
+/* Admin login is unauthenticated, so keep it independent from dashboard layout chrome. */
+.dashboard-page.admin-page .admin-login-shell {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(5, 7, 12, 0.94), rgba(6, 18, 34, 0.84)),
+    url("https://images.pexels.com/photos/325229/pexels-photo-325229.jpeg?auto=compress&cs=tinysrgb&w=1800");
+  background-size: cover;
+  background-position: center;
+}
+
+.dashboard-page.admin-page .admin-login-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(34, 211, 238, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(245, 158, 11, 0.07) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.88), transparent 78%);
+}
+
+.dashboard-page.admin-page .admin-login-shell .auth-card {
+  width: min(440px, 100%);
+  padding: clamp(1.35rem, 4vw, 2rem);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  color: #e5eefc;
+  background: rgba(15, 31, 56, 0.94);
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(18px);
+}
+
+.dashboard-page.admin-page .admin-login-shell .auth-card:hover {
+  transform: none;
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.42);
+}
+
+.dashboard-page.admin-page .admin-login-shell .brand {
+  margin-bottom: 1.4rem;
+  color: #f8fafc;
+}
+
+.dashboard-page.admin-page .admin-login-shell .brand-mark {
+  color: #07111f;
+  background: #67e8f9;
+}
+
+.dashboard-page.admin-page .admin-login-shell h1 {
+  margin: 0 0 0.45rem;
+  color: #f8fafc;
+  font-size: clamp(1.55rem, 4vw, 2rem);
+  line-height: 1.1;
+}
+
+.dashboard-page.admin-page .admin-login-shell p {
+  color: #9fb2d8;
+}
+
+.dashboard-page.admin-page .admin-login-shell form {
+  margin-top: 1.35rem;
+  gap: 0.95rem;
+}
+
+.dashboard-page.admin-page .admin-login-shell label {
+  color: #dbe7fb;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.dashboard-page.admin-page .admin-login-shell input {
+  min-height: 48px;
+  color: #f8fafc;
+  background: rgba(8, 17, 31, 0.78);
+  border-color: rgba(96, 130, 189, 0.56);
+  border-radius: 8px;
+}
+
+.dashboard-page.admin-page .admin-login-shell input::placeholder {
+  color: #7486a8;
+}
+
+.dashboard-page.admin-page .admin-login-shell input:focus {
+  outline: 2px solid rgba(103, 232, 249, 0.45);
+  border-color: #67e8f9;
+}
+
+.dashboard-page.admin-page .admin-login-shell .btn {
+  min-height: 48px;
+  margin-top: 0.25rem;
+  color: #07111f;
+  background: #67e8f9;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.dashboard-page.admin-page .admin-login-shell .btn:hover,
+.dashboard-page.admin-page .admin-login-shell .btn:focus-visible {
+  color: #07111f;
+  background: #22d3ee;
+  box-shadow: 0 16px 34px rgba(34, 211, 238, 0.24);
+  transform: translateY(-1px);
+}
+
+.dashboard-page.admin-page .admin-login-shell .form-message {
+  min-height: 1.25rem;
+  color: #fca5a5;
+}
+
+.dashboard-page.admin-page .admin-login-shell .back {
+  color: #c7d2fe;
+  font-weight: 700;
+}
+
+.dashboard-page.admin-page .admin-login-shell .back:hover,
+.dashboard-page.admin-page .admin-login-shell .back:focus-visible {
+  color: #67e8f9;
+}
+
+@media (max-width: 1120px) {
+  .dashboard-page.admin-page .admin-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .dashboard-page.admin-page .admin-meta {
+    justify-content: flex-start;
+  }
+
+  .dashboard-page.admin-page .admin-overview-grid {
+    grid-template-columns: 1fr;
+  }
 }

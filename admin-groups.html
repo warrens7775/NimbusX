@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Console - NimbusX</title>
+  <title>Groups - NimbusX Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -12,7 +12,7 @@
   />
   <link rel="stylesheet" href="auth.css?v=29" />
 </head>
-<body class="dashboard-page admin-page" data-admin-page="overview" data-admin-loading="true">
+<body class="dashboard-page admin-page" data-admin-page="groups" data-admin-loading="true">
   <div id="adminLoginShell" class="admin-login-shell">
     <section class="auth-card">
       <a class="brand" href="/" aria-label="NimbusX home">
@@ -49,9 +49,9 @@
           Administration <span class="menu-caret">▾</span>
         </button>
         <div id="adminMenuList" class="admin-menu-list open">
-          <a class="menu-item active" href="admin" data-admin-view-button="overview">Overview</a>
+          <a class="menu-item" href="admin" data-admin-view-button="overview">Overview</a>
           <a class="menu-item" href="admin-users" data-admin-view-button="users">Users</a>
-          <a class="menu-item" href="admin-groups" data-admin-view-button="groups">Groups</a>
+          <a class="menu-item active" href="admin-groups" data-admin-view-button="groups">Groups</a>
           <a class="menu-item" href="admin-leads" data-admin-view-button="leads">Leads</a>
         </div>
       </div>
@@ -68,35 +68,65 @@
 
       <section class="vm-header">
         <div>
-          <h1>Admin Console</h1>
+          <h1>Groups</h1>
           <p id="adminSummary" class="admin-dashboard-summary">Loading session</p>
         </div>
       </section>
 
-      <section class="admin-page-section">
-        <section class="admin-overview-grid" id="overviewGrid"></section>
-        <article class="admin-card admin-activity-card">
-          <div class="admin-section-header">
-            <div>
-              <h2>Activity</h2>
-              <p class="admin-muted">Recent admin actions and platform changes.</p>
+      <section class="admin-layout admin-page-section">
+        <div class="admin-stack">
+          <article class="admin-card">
+            <div class="admin-section-header">
+              <div>
+                <h2>Groups</h2>
+                <p class="admin-muted">Use the buttons below to open a group directly, then edit permissions without scrolling through every group card.</p>
+              </div>
+              <div class="admin-toolbar">
+                <input id="groupSearchInput" type="text" placeholder="Search groups" />
+              </div>
             </div>
-          </div>
-          <div class="admin-table-wrap">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>Action</th>
-                  <th>Actor</th>
-                  <th>Target</th>
-                  <th>Details</th>
-                  <th>Time</th>
-                </tr>
-              </thead>
-              <tbody id="auditTableBody"></tbody>
-            </table>
-          </div>
-        </article>
+
+            <div class="group-browser">
+              <aside class="group-rail">
+                <div class="group-rail-head">
+                  <strong>All groups</strong>
+                  <span id="groupCountLabel" class="admin-chip">0</span>
+                </div>
+                <div id="groupListRail" class="group-list-rail"></div>
+              </aside>
+
+              <div class="group-editor">
+                <form id="groupCreateForm" class="admin-form">
+                  <label>
+                    Group name
+                    <input id="groupName" type="text" placeholder="devops" />
+                  </label>
+                  <label>
+                    Description
+                    <textarea id="groupDescription" placeholder="Describe what this group can do"></textarea>
+                  </label>
+                  <div>
+                    <div class="admin-muted">Permissions for new group</div>
+                    <div id="groupPermissionGrid" class="permission-grid"></div>
+                  </div>
+                  <div class="admin-form-actions">
+                    <button class="admin-button primary" type="submit">Create group</button>
+                  </div>
+                </form>
+
+                <div id="selectedGroupPanel" class="selected-group-panel">
+                  <div class="admin-section-header">
+                    <div>
+                      <h3 id="selectedGroupTitle">Select a group</h3>
+                      <p id="selectedGroupDescription" class="admin-muted">Choose a group from the buttons on the left to edit it here.</p>
+                    </div>
+                  </div>
+                  <div id="selectedGroupContent" class="admin-empty">No group selected.</div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
       </section>
     </main>
   </div>

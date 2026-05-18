@@ -16,7 +16,7 @@ import xml.etree.ElementTree as ET
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "nimbus.db")
+DB_PATH = os.environ.get("DB_PATH", os.path.join(BASE_DIR, "nimbus.db"))
 ADMIN_SESSION_COOKIE = "nimbus_admin_session"
 ADMIN_SESSION_TTL = 60 * 60 * 12
 ADMIN_SESSION_SECRET = os.environ.get("NIMBUS_ADMIN_SECRET", "nimbusx-admin-session-secret")
@@ -244,10 +244,17 @@ def init_db():
             workload TEXT,
             budget TEXT,
             message TEXT,
+            status TEXT NOT NULL DEFAULT 'new',
+            assigned_user_id INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
     )
+    lead_columns = [row[1] for row in conn.execute("PRAGMA table_info(leads)").fetchall()]
+    if "status" not in lead_columns:
+        conn.execute("ALTER TABLE leads ADD COLUMN status TEXT NOT NULL DEFAULT 'new'")
+    if "assigned_user_id" not in lead_columns:
+        conn.execute("ALTER TABLE leads ADD COLUMN assigned_user_id INTEGER")
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS billing_usage_events (
@@ -1133,6 +1140,15 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             self.handle_admin_audit(conn, admin_user, permissions)
             conn.close()
             return
+        if parsed.path == "/api/admin/leads":
+            conn, payload, error = self._require_admin("view_leads")
+            if error:
+                self._send_json(error, error.get("status", 401))
+                return
+            admin_user, permissions = payload
+            self.handle_admin_leads(conn, admin_user, permissions)
+            conn.close()
+            return
         if parsed.path == "/api/projects":
             params = parse_qs(parsed.query)
             email = (params.get("email") or [""])[0]
@@ -1283,6 +1299,9 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             "/api/admin/roles/update": self.handle_admin_role_update,
             "/api/admin/roles/delete": self.handle_admin_role_delete,
             "/api/admin/roles/permissions": self.handle_admin_role_permissions,
+            "/api/admin/leads/status": self.handle_admin_lead_status,
+            "/api/admin/leads/assign": self.handle_admin_lead_assign,
+            "/api/admin/leads/delete": self.handle_admin_lead_delete,
             "/api/register": self.handle_register,
             "/api/login": self.handle_login,
             "/api/projects/create": self.handle_project_create,
@@ -1407,6 +1426,7 @@ class NimbusHandler(SimpleHTTPRequestHandler):
     def handle_admin_login(self, data: dict):
         email = (data.get("email") or "").strip().lower()
         password = (data.get("password") or "").strip()
+        twofa_code = (data.get("twoFactorCode") or "").strip()
         if not email or not password:
             self._send_json({"ok": False, "message": "Email and password are required"}, 400)
             return
@@ -1427,6 +1447,22 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             conn.close()
             self._send_json({"ok": False, "message": "This account cannot access the admin console"}, 403)
             return
+        if user["twofa_enabled"] == 1:
+            if not twofa_code:
+                conn.close()
+                self._send_json(
+                    {
+                        "ok": False,
+                        "requires2FA": True,
+                        "message": "Enter the 6-digit code from your authenticator app",
+                    },
+                    401,
+                )
+                return
+            if not verify_totp_code(user["twofa_secret"], twofa_code):
+                conn.close()
+                self._send_json({"ok": False, "message": "Invalid authenticator code"}, 401)
+                return
 
         expires_at = int(time.time()) + ADMIN_SESSION_TTL
         token = _make_admin_session(user["id"], expires_at)
@@ -1623,6 +1659,64 @@ class NimbusHandler(SimpleHTTPRequestHandler):
                     }
                     for row in rows
                 ],
+            }
+        )
+
+    def handle_admin_leads(self, conn, admin_user, permissions: set[str]):
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT leads.id, leads.email, leads.company, leads.phone, leads.service, leads.workload,
+                   leads.budget, leads.message, leads.status, leads.assigned_user_id, leads.created_at,
+                   assignee.full_name AS assigned_name, assignee.email AS assigned_email
+            FROM leads
+            LEFT JOIN users assignee ON assignee.id = leads.assigned_user_id
+            ORDER BY leads.id DESC
+            LIMIT 250
+            """
+        ).fetchall()
+        assignees = conn.execute(
+            """
+            SELECT DISTINCT users.id, users.full_name, users.email, roles.name AS role_name
+            FROM users
+            JOIN roles ON roles.id = users.role_id
+            JOIN role_permissions perms ON perms.role_id = roles.id
+            WHERE users.is_active = 1
+              AND perms.permission_key IN ('view_leads', 'manage_leads')
+            ORDER BY users.full_name ASC, users.email ASC
+            """
+        ).fetchall()
+        self._send_json(
+            {
+                "ok": True,
+                "leads": [
+                    {
+                        "id": row["id"],
+                        "email": row["email"],
+                        "company": row["company"],
+                        "phone": row["phone"],
+                        "service": row["service"],
+                        "workload": row["workload"],
+                        "budget": row["budget"],
+                        "message": row["message"],
+                        "status": row["status"],
+                        "assignedUserId": row["assigned_user_id"],
+                        "assignedName": row["assigned_name"],
+                        "assignedEmail": row["assigned_email"],
+                        "createdAt": row["created_at"],
+                    }
+                    for row in rows
+                ],
+                "assignees": [
+                    {
+                        "id": row["id"],
+                        "fullName": row["full_name"],
+                        "email": row["email"],
+                        "roleName": row["role_name"],
+                    }
+                    for row in assignees
+                ],
+                "permissions": sorted(permissions),
             }
         )
 
@@ -1842,6 +1936,126 @@ class NimbusHandler(SimpleHTTPRequestHandler):
         conn.commit()
         self._send_json({"ok": True, "message": "Permissions updated"})
         conn.close()
+
+    def handle_admin_lead_status(self, data: dict):
+        conn, payload, error = self._require_admin("manage_leads")
+        if error:
+            self._send_json(error, error.get("status", 401))
+            return
+        admin_user, _permissions = payload
+        lead_id = int(data.get("leadId") or 0)
+        status = (data.get("status") or "").strip().lower()
+        if status not in ("new", "inprogress", "accept", "reject"):
+            conn.close()
+            self._send_json({"ok": False, "message": "Invalid lead status"}, 400)
+            return
+        lead = conn.execute("SELECT id, email, company, status FROM leads WHERE id = ?", (lead_id,)).fetchone()
+        if not lead:
+            conn.close()
+            self._send_json({"ok": False, "message": "Lead not found"}, 404)
+            return
+        conn.execute("UPDATE leads SET status = ? WHERE id = ?", (status, lead_id))
+        _record_admin_action(
+            conn,
+            admin_user["id"],
+            "update_lead_status",
+            details={
+                "leadId": lead["id"],
+                "email": lead["email"],
+                "company": lead["company"],
+                "from": lead["status"],
+                "to": status,
+            },
+        )
+        conn.commit()
+        conn.close()
+        self._send_json({"ok": True, "message": "Lead status updated"})
+
+    def handle_admin_lead_assign(self, data: dict):
+        conn, payload, error = self._require_admin("manage_leads")
+        if error:
+            self._send_json(error, error.get("status", 401))
+            return
+        admin_user, _permissions = payload
+        lead_id = int(data.get("leadId") or 0)
+        assignee_id = int(data.get("assigneeId") or 0)
+        lead = conn.execute(
+            """
+            SELECT leads.id, leads.email, leads.company, leads.assigned_user_id,
+                   assignee.email AS assigned_email
+            FROM leads
+            LEFT JOIN users assignee ON assignee.id = leads.assigned_user_id
+            WHERE leads.id = ?
+            """,
+            (lead_id,),
+        ).fetchone()
+        if not lead:
+            conn.close()
+            self._send_json({"ok": False, "message": "Lead not found"}, 404)
+            return
+
+        assignee = None
+        if assignee_id:
+            assignee = conn.execute(
+                """
+                SELECT DISTINCT users.id, users.full_name, users.email
+                FROM users
+                JOIN roles ON roles.id = users.role_id
+                JOIN role_permissions perms ON perms.role_id = roles.id
+                WHERE users.id = ?
+                  AND users.is_active = 1
+                  AND perms.permission_key IN ('view_leads', 'manage_leads')
+                """,
+                (assignee_id,),
+            ).fetchone()
+            if not assignee:
+                conn.close()
+                self._send_json({"ok": False, "message": "Assignee must be an active user with lead permissions"}, 400)
+                return
+
+        conn.execute("UPDATE leads SET assigned_user_id = ? WHERE id = ?", (assignee_id or None, lead_id))
+        _record_admin_action(
+            conn,
+            admin_user["id"],
+            "assign_lead",
+            details={
+                "leadId": lead["id"],
+                "email": lead["email"],
+                "company": lead["company"],
+                "from": lead["assigned_email"] or "unassigned",
+                "to": assignee["email"] if assignee else "unassigned",
+            },
+        )
+        conn.commit()
+        conn.close()
+        self._send_json({"ok": True, "message": "Lead assignment updated"})
+
+    def handle_admin_lead_delete(self, data: dict):
+        conn, payload, error = self._require_admin("manage_leads")
+        if error:
+            self._send_json(error, error.get("status", 401))
+            return
+        admin_user, _permissions = payload
+        lead_id = int(data.get("leadId") or 0)
+        if not lead_id:
+            conn.close()
+            self._send_json({"ok": False, "message": "Lead is required"}, 400)
+            return
+        lead = conn.execute("SELECT id, email, company FROM leads WHERE id = ?", (lead_id,)).fetchone()
+        if not lead:
+            conn.close()
+            self._send_json({"ok": False, "message": "Lead not found"}, 404)
+            return
+        conn.execute("DELETE FROM leads WHERE id = ?", (lead_id,))
+        _record_admin_action(
+            conn,
+            admin_user["id"],
+            "delete_lead",
+            details={"leadId": lead["id"], "email": lead["email"], "company": lead["company"]},
+        )
+        conn.commit()
+        conn.close()
+        self._send_json({"ok": True, "message": "Lead deleted"})
 
     def handle_account_status(self, data: dict):
         email = data.get("email")
@@ -2494,8 +2708,8 @@ class NimbusHandler(SimpleHTTPRequestHandler):
         conn = sqlite3.connect(DB_PATH)
         conn.execute(
             """
-            INSERT INTO leads (email, company, phone, service, workload, budget, message)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO leads (email, company, phone, service, workload, budget, message, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'new')
             """,
             (email, company, phone, service, workload, budget, message),
         )

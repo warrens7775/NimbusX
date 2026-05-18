@@ -55,7 +55,7 @@ if (canUseCursorEffect) {
   });
 
   document.querySelectorAll(
-    "a, button, input, select, textarea, .card, .price-card, .resource-card, .hero-panel, .flow-steps article, .media-stage, .depth-card, .visual-glass, .auth-card, .dash-sidebar, .empty-state, .projects-table, .project-modal"
+    "a, button, input, select, textarea, .card, .price-card, .resource-card, .hero-panel, .flow-steps article, .media-stage, .depth-card, .visual-glass, .auth-card, .dash-sidebar, .empty-state, .projects-table, .project-modal, .admin-card, .admin-table-wrap, .group-rail, .selected-group-panel"
   ).forEach((element) => {
     element.addEventListener("pointerenter", () => document.body.classList.add("cursor-hover"));
     element.addEventListener("pointerleave", () => document.body.classList.remove("cursor-hover"));

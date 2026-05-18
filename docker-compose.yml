@@ -1,0 +1,72 @@
+services:
+  nimbus-app:
+    build:
+      context: .
+    container_name: nimbusx-app
+    environment:
+      PORT: "8000"
+      DB_PATH: /data/nimbus.db
+      NIMBUS_ADMIN_SECRET: ${NIMBUS_ADMIN_SECRET:-change-this-admin-session-secret}
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-nimbusx-app}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-nimbusx-app-secret-change-me}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_PROVIDER: minio
+      LAGO_API_URL: ${LAGO_API_URL:-http://host.docker.internal:8080/api/v1}
+      LAGO_FRONT_URL: ${LAGO_FRONT_URL:-http://localhost:8080}
+      LAGO_API_KEY: ${LAGO_API_KEY:-}
+      LAGO_DEFAULT_PLAN_CODE: ${LAGO_DEFAULT_PLAN_CODE:-nimbusx-standard}
+      LAGO_DEFAULT_PLAN_NAME: ${LAGO_DEFAULT_PLAN_NAME:-NimbusX Standard}
+      LAGO_DEFAULT_CURRENCY: ${LAGO_DEFAULT_CURRENCY:-USD}
+    ports:
+      - "${NIMBUS_PORT:-8000}:8000"
+    volumes:
+      - nimbus-db:/data
+    depends_on:
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: nimbusx-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-nimbusxadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-nimbusxadmin-secret-change-me}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    container_name: nimbusx-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-nimbusxadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-nimbusxadmin-secret-change-me}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-nimbusx-app}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-nimbusx-app-secret-change-me}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
+        mc admin user add local "$$S3_ACCESS_KEY" "$$S3_SECRET_KEY" || true;
+        mc admin policy attach local readwrite --user "$$S3_ACCESS_KEY"
+    restart: "no"
+
+volumes:
+  nimbus-db:
+  minio-data:
