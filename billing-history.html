@@ -139,21 +139,46 @@
         <h1>Billing History</h1>
       </section>
 
-      <section class="projects-table">
+      <section class="billing-summary">
+        <div>
+          <p class="billing-kicker">Lago Integration</p>
+          <h2 id="billingStatusTitle">Checking billing connection</h2>
+          <p id="billingStatusCopy">NimbusX is checking the Lago customer, subscriptions, and invoice feed.</p>
+        </div>
+        <div class="billing-actions">
+          <button id="syncBillingButton" class="project-modal-btn primary" type="button">Sync Billing</button>
+          <button id="openLagoButton" class="project-modal-btn" type="button">Open Lago</button>
+          <button id="openPortalButton" class="project-modal-btn" type="button">Customer Portal</button>
+        </div>
+      </section>
+
+      <section class="projects-table billing-projects">
+        <div class="projects-row head">
+          <span>Project</span>
+          <span>Lago Subscription</span>
+          <span>Status</span>
+        </div>
+        <div id="billingProjectRows">
+          <div class="projects-row">
+            <span>Loading</span>
+            <span>Checking subscription sync</span>
+            <span>Pending</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="projects-table billing-invoices">
         <div class="projects-row head">
           <span>Invoice ID</span>
           <span>Period / Amount</span>
           <span>Status</span>
         </div>
-        <div class="projects-row">
-          <span>INV-2026-001</span>
-          <span>Apr 2026 - $146.20</span>
-          <span>Paid</span>
-        </div>
-        <div class="projects-row">
-          <span>INV-2026-000</span>
-          <span>Mar 2026 - $129.80</span>
-          <span>Paid</span>
+        <div id="invoiceRows">
+          <div class="projects-row">
+            <span>Loading</span>
+            <span>Checking Lago invoices</span>
+            <span>Pending</span>
+          </div>
         </div>
       </section>
 
@@ -186,6 +211,93 @@
     const infraMenuList = document.getElementById("infraMenuList");
     const adminToggle = document.getElementById("adminToggle");
     const adminMenuList = document.getElementById("adminMenuList");
+    const billingStatusTitle = document.getElementById("billingStatusTitle");
+    const billingStatusCopy = document.getElementById("billingStatusCopy");
+    const billingProjectRows = document.getElementById("billingProjectRows");
+    const invoiceRows = document.getElementById("invoiceRows");
+    const syncBillingButton = document.getElementById("syncBillingButton");
+    const openLagoButton = document.getElementById("openLagoButton");
+    const openPortalButton = document.getElementById("openPortalButton");
+
+    function escapeBillingHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function formatInvoiceAmount(invoice) {
+      const cents = invoice.total_amount_cents ?? invoice.fees_amount_cents ?? invoice.amount_cents ?? 0;
+      const currency = invoice.currency || invoice.amount_currency || "USD";
+      return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(Number(cents) / 100);
+    }
+
+    function renderBillingStatus(billing) {
+      if (!billing.configured) {
+        billingStatusTitle.textContent = "Lago is installed but the API key is not configured";
+        billingStatusCopy.textContent = "Add LAGO_API_KEY to the NimbusX server environment, restart NimbusX, then click Sync Billing.";
+      } else if (billing.customerSyncError) {
+        billingStatusTitle.textContent = "Billing sync needs attention";
+        billingStatusCopy.textContent = billing.customerSyncError;
+      } else if (billing.customerSyncedAt) {
+        billingStatusTitle.textContent = "Billing is connected";
+        billingStatusCopy.textContent = `Customer ${billing.customerExternalId} synced with Lago.`;
+      } else {
+        billingStatusTitle.textContent = "Billing is ready to sync";
+        billingStatusCopy.textContent = "Click Sync Billing to create the Lago customer and project subscriptions.";
+      }
+
+      if (openLagoButton) {
+        openLagoButton.onclick = () => window.open(billing.dashboardUrl || "http://localhost:8080", "_blank", "noopener");
+      }
+
+      billingProjectRows.innerHTML = (billing.projects || []).length
+        ? billing.projects
+            .map((project) => {
+              const status = project.subscriptionSyncedAt
+                ? `Synced ${project.subscriptionSyncedAt}`
+                : project.syncError || "Not synced";
+              return `<div class="projects-row">
+                <span>${escapeBillingHtml(project.name)}</span>
+                <span>${escapeBillingHtml(project.subscriptionExternalId)}</span>
+                <span>${escapeBillingHtml(status)}</span>
+              </div>`;
+            })
+            .join("")
+        : `<div class="projects-row"><span>No projects</span><span>Create a project first</span><span>Empty</span></div>`;
+    }
+
+    function renderInvoices(result) {
+      if (!result.configured) {
+        invoiceRows.innerHTML = `<div class="projects-row"><span>Lago API key missing</span><span>No invoices loaded</span><span>Config required</span></div>`;
+        return;
+      }
+      if (!result.ok) {
+        invoiceRows.innerHTML = `<div class="projects-row"><span>Unable to load</span><span>${escapeBillingHtml(result.message || "Lago invoice request failed")}</span><span>Error</span></div>`;
+        return;
+      }
+      const invoices = result.invoices || [];
+      invoiceRows.innerHTML = invoices.length
+        ? invoices
+            .map((invoice) => `<div class="projects-row">
+              <span>${escapeBillingHtml(invoice.number || invoice.sequential_id || invoice.lago_id || "Invoice")}</span>
+              <span>${escapeBillingHtml(invoice.invoice_type || invoice.issue_date || "Current period")} - ${escapeBillingHtml(formatInvoiceAmount(invoice))}</span>
+              <span>${escapeBillingHtml(invoice.status || invoice.payment_status || "open")}</span>
+            </div>`)
+            .join("")
+        : `<div class="projects-row"><span>No invoices yet</span><span>Lago has no invoices for this customer</span><span>Empty</span></div>`;
+    }
+
+    async function loadBilling() {
+      const email = window.NimbusProjects.getUserEmail();
+      if (!email) return;
+      const status = await fetch(`/api/billing/status?email=${encodeURIComponent(email)}`).then((response) => response.json());
+      if (status.ok) renderBillingStatus(status.billing);
+      const invoices = await fetch(`/api/billing/invoices?email=${encodeURIComponent(email)}`).then((response) => response.json());
+      renderInvoices(invoices);
+    }
 
     async function refreshProjects(query = "") {
       const response = await window.NimbusProjects.loadProjectsState();
@@ -269,12 +381,40 @@
       });
     }
 
+    if (syncBillingButton) {
+      syncBillingButton.addEventListener("click", async () => {
+        syncBillingButton.disabled = true;
+        syncBillingButton.textContent = "Syncing";
+        const email = window.NimbusProjects.getUserEmail();
+        const result = await window.NimbusProjects.apiPost("/api/billing/sync", { email });
+        if (result.ok && result.billing) renderBillingStatus(result.billing);
+        await loadBilling();
+        syncBillingButton.disabled = false;
+        syncBillingButton.textContent = "Sync Billing";
+      });
+    }
+
+    if (openPortalButton) {
+      openPortalButton.addEventListener("click", async () => {
+        const email = window.NimbusProjects.getUserEmail();
+        const result = await window.NimbusProjects.apiPost("/api/billing/portal-url", { email });
+        if (!result.ok) {
+          window.alert(result.message || "Unable to open the Lago customer portal.");
+          return;
+        }
+        window.open(result.portalUrl, "_blank", "noopener");
+      });
+    }
+
     if (user) {
       try {
         const parsed = JSON.parse(user);
         if (myProfileLink) myProfileLink.textContent = parsed.fullName ? `My Account (${parsed.fullName})` : "My Account";
         if (profileEmail) profileEmail.textContent = parsed.email || "user@nimbusx.com";
+        loadBilling();
       } catch (_error) {}
+    } else {
+      window.location.href = "login";
     }
 
     if (logoutButton) {

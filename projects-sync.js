@@ -448,6 +448,9 @@ function initAccountControls() {
 }
 
 window.NimbusProjects = {
+  apiGet,
+  apiPost,
+  getUserEmail,
   loadProjectsState,
   renderProjectList,
   renderProjectsTable,

@@ -26,6 +26,12 @@ S3_SECRET_KEY = os.environ.get("S3_SECRET_KEY", "")
 S3_REGION = os.environ.get("S3_REGION", "us-east-1")
 S3_PROVIDER = os.environ.get("S3_PROVIDER", "minio").lower()
 S3_BUCKET_RE = re.compile(r"^(?![0-9]+(?:\.[0-9]+){3}$)[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$")
+LAGO_API_URL = os.environ.get("LAGO_API_URL", "http://localhost:8080/api/v1").rstrip("/")
+LAGO_FRONT_URL = os.environ.get("LAGO_FRONT_URL", "http://localhost:8080").rstrip("/")
+LAGO_API_KEY = os.environ.get("LAGO_API_KEY", "").strip()
+LAGO_DEFAULT_PLAN_CODE = os.environ.get("LAGO_DEFAULT_PLAN_CODE", "nimbusx-standard").strip()
+LAGO_DEFAULT_PLAN_NAME = os.environ.get("LAGO_DEFAULT_PLAN_NAME", "NimbusX Standard").strip()
+LAGO_DEFAULT_CURRENCY = os.environ.get("LAGO_DEFAULT_CURRENCY", "USD").strip().upper()
 ADMIN_PERMISSION_CATALOG = [
     ("access_admin_console", "Access admin console"),
     ("view_dashboard", "View overview"),
@@ -127,6 +133,14 @@ def init_db():
         conn.execute("ALTER TABLE users ADD COLUMN twofa_secret TEXT")
     if "twofa_enabled" not in user_columns:
         conn.execute("ALTER TABLE users ADD COLUMN twofa_enabled INTEGER NOT NULL DEFAULT 0")
+    if "lago_customer_external_id" not in user_columns:
+        conn.execute("ALTER TABLE users ADD COLUMN lago_customer_external_id TEXT")
+    if "lago_customer_lago_id" not in user_columns:
+        conn.execute("ALTER TABLE users ADD COLUMN lago_customer_lago_id TEXT")
+    if "lago_customer_synced_at" not in user_columns:
+        conn.execute("ALTER TABLE users ADD COLUMN lago_customer_synced_at TEXT")
+    if "lago_last_sync_error" not in user_columns:
+        conn.execute("ALTER TABLE users ADD COLUMN lago_last_sync_error TEXT")
 
     conn.execute(
         """
@@ -179,6 +193,13 @@ def init_db():
         )
         """
     )
+    project_columns = [row[1] for row in conn.execute("PRAGMA table_info(projects)").fetchall()]
+    if "lago_subscription_external_id" not in project_columns:
+        conn.execute("ALTER TABLE projects ADD COLUMN lago_subscription_external_id TEXT")
+    if "lago_subscription_synced_at" not in project_columns:
+        conn.execute("ALTER TABLE projects ADD COLUMN lago_subscription_synced_at TEXT")
+    if "lago_last_sync_error" not in project_columns:
+        conn.execute("ALTER TABLE projects ADD COLUMN lago_last_sync_error TEXT")
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS vms (
@@ -224,6 +245,24 @@ def init_db():
             budget TEXT,
             message TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS billing_usage_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            project_id INTEGER,
+            resource_id INTEGER,
+            event_code TEXT NOT NULL,
+            transaction_id TEXT NOT NULL UNIQUE,
+            status TEXT NOT NULL,
+            message TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE SET NULL,
+            FOREIGN KEY(resource_id) REFERENCES resources(id) ON DELETE SET NULL
         )
         """
     )
@@ -443,6 +482,8 @@ def get_user_by_email(conn, email: str):
         """
         SELECT users.id, users.full_name, users.email, users.password_hash, users.role_id, users.is_active,
                users.active_project_id, users.twofa_secret, users.twofa_enabled,
+               users.lago_customer_external_id, users.lago_customer_lago_id,
+               users.lago_customer_synced_at, users.lago_last_sync_error,
                roles.name AS role_name, roles.description AS role_description, roles.is_system
         FROM users
         LEFT JOIN roles ON roles.id = users.role_id
@@ -458,6 +499,8 @@ def get_user_by_id(conn, user_id: int):
         """
         SELECT users.id, users.full_name, users.email, users.password_hash, users.role_id, users.is_active,
                users.active_project_id, users.twofa_secret, users.twofa_enabled,
+               users.lago_customer_external_id, users.lago_customer_lago_id,
+               users.lago_customer_synced_at, users.lago_last_sync_error,
                roles.name AS role_name, roles.description AS role_description, roles.is_system
         FROM users
         LEFT JOIN roles ON roles.id = users.role_id
@@ -717,6 +760,223 @@ def delete_s3_bucket(bucket_name: str):
     _s3_request("DELETE", bucket_name)
 
 
+def lago_is_configured() -> bool:
+    return bool(LAGO_API_URL and LAGO_API_KEY)
+
+
+def lago_dashboard_url(path: str = "") -> str:
+    clean_path = "/" + path.strip("/") if path else ""
+    return f"{LAGO_FRONT_URL}{clean_path}"
+
+
+def lago_external_customer_id(user_id: int) -> str:
+    return f"nimbusx-user-{user_id}"
+
+
+def lago_external_subscription_id(project_id: int) -> str:
+    return f"nimbusx-project-{project_id}"
+
+
+def _lago_request(method: str, path: str, payload: dict | None = None):
+    if not lago_is_configured():
+        raise RuntimeError("Lago API key is not configured")
+    url = f"{LAGO_API_URL}/{path.lstrip('/')}"
+    data = json.dumps(payload).encode("utf-8") if payload is not None else None
+    request = urllib.request.Request(
+        url,
+        data=data,
+        method=method,
+        headers={
+            "Authorization": f"Bearer {LAGO_API_KEY}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            body = response.read().decode("utf-8", errors="replace")
+            return json.loads(body) if body else {}
+    except urllib.error.HTTPError as error:
+        body = error.read().decode("utf-8", errors="replace")
+        message = body or error.reason or f"HTTP {error.code}"
+        raise RuntimeError(f"Lago request failed with HTTP {error.code}: {message}")
+    except urllib.error.URLError as error:
+        raise RuntimeError(f"Lago request failed: {error.reason}")
+
+
+def _lago_get_or_none(path: str):
+    try:
+        return _lago_request("GET", path)
+    except RuntimeError as error:
+        if "HTTP 404" in str(error):
+            return None
+        raise
+
+
+def lago_ensure_default_plan():
+    if not LAGO_DEFAULT_PLAN_CODE:
+        return None
+    existing = _lago_get_or_none(f"plans/{quote(LAGO_DEFAULT_PLAN_CODE, safe='')}")
+    if existing:
+        return existing
+    return _lago_request(
+        "POST",
+        "plans",
+        {
+            "plan": {
+                "name": LAGO_DEFAULT_PLAN_NAME or "NimbusX Standard",
+                "code": LAGO_DEFAULT_PLAN_CODE,
+                "interval": "monthly",
+                "pay_in_advance": False,
+                "amount_cents": 0,
+                "amount_currency": LAGO_DEFAULT_CURRENCY or "USD",
+                "description": "Default NimbusX billing plan for synced projects.",
+            }
+        },
+    )
+
+
+def lago_sync_customer(conn, user):
+    external_id = user["lago_customer_external_id"] or lago_external_customer_id(user["id"])
+    if not lago_is_configured():
+        conn.execute(
+            "UPDATE users SET lago_customer_external_id = ?, lago_last_sync_error = ? WHERE id = ?",
+            (external_id, "LAGO_API_KEY is not configured", user["id"]),
+        )
+        conn.commit()
+        return {"ok": False, "configured": False, "externalId": external_id, "message": "Lago API key is not configured"}
+    try:
+        payload = {
+            "customer": {
+                "external_id": external_id,
+                "name": user["full_name"],
+                "email": user["email"],
+                "currency": LAGO_DEFAULT_CURRENCY or "USD",
+            }
+        }
+        response = _lago_request("POST", "customers", payload)
+        customer = response.get("customer", response)
+        synced_at = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+        conn.execute(
+            """
+            UPDATE users
+            SET lago_customer_external_id = ?, lago_customer_lago_id = ?, lago_customer_synced_at = ?, lago_last_sync_error = NULL
+            WHERE id = ?
+            """,
+            (external_id, str(customer.get("lago_id") or ""), synced_at, user["id"]),
+        )
+        conn.commit()
+        return {"ok": True, "configured": True, "externalId": external_id, "customer": customer}
+    except RuntimeError as error:
+        conn.execute(
+            "UPDATE users SET lago_customer_external_id = ?, lago_last_sync_error = ? WHERE id = ?",
+            (external_id, str(error), user["id"]),
+        )
+        conn.commit()
+        return {"ok": False, "configured": True, "externalId": external_id, "message": str(error)}
+
+
+def lago_sync_project_subscription(conn, user, project):
+    customer_result = lago_sync_customer(conn, user)
+    external_id = project["lago_subscription_external_id"] or lago_external_subscription_id(project["id"])
+    if not customer_result.get("ok"):
+        conn.execute(
+            "UPDATE projects SET lago_subscription_external_id = ?, lago_last_sync_error = ? WHERE id = ?",
+            (external_id, customer_result.get("message", "Customer sync failed"), project["id"]),
+        )
+        conn.commit()
+        return {"ok": False, "externalId": external_id, "message": customer_result.get("message", "Customer sync failed")}
+    if not LAGO_DEFAULT_PLAN_CODE:
+        return {"ok": False, "externalId": external_id, "message": "LAGO_DEFAULT_PLAN_CODE is not configured"}
+    try:
+        lago_ensure_default_plan()
+        existing = _lago_get_or_none(f"subscriptions/{quote(external_id, safe='')}")
+        if existing:
+            synced_at = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+            conn.execute(
+                "UPDATE projects SET lago_subscription_external_id = ?, lago_subscription_synced_at = ?, lago_last_sync_error = NULL WHERE id = ?",
+                (external_id, synced_at, project["id"]),
+            )
+            conn.commit()
+            return {"ok": True, "externalId": external_id, "subscription": existing.get("subscription", existing)}
+        response = _lago_request(
+            "POST",
+            "subscriptions",
+            {
+                "subscription": {
+                    "external_customer_id": customer_result["externalId"],
+                    "external_id": external_id,
+                    "plan_code": LAGO_DEFAULT_PLAN_CODE,
+                    "name": project["name"],
+                    "billing_time": "calendar",
+                }
+            },
+        )
+        synced_at = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+        conn.execute(
+            "UPDATE projects SET lago_subscription_external_id = ?, lago_subscription_synced_at = ?, lago_last_sync_error = NULL WHERE id = ?",
+            (external_id, synced_at, project["id"]),
+        )
+        conn.commit()
+        return {"ok": True, "externalId": external_id, "subscription": response.get("subscription", response)}
+    except RuntimeError as error:
+        conn.execute(
+            "UPDATE projects SET lago_subscription_external_id = ?, lago_last_sync_error = ? WHERE id = ?",
+            (external_id, str(error), project["id"]),
+        )
+        conn.commit()
+        return {"ok": False, "externalId": external_id, "message": str(error)}
+
+
+def lago_record_resource_event(conn, user, project_id: int, resource_id: int, resource_type: str):
+    project = conn.execute(
+        "SELECT id, name, lago_subscription_external_id FROM projects WHERE id = ? AND user_id = ?",
+        (project_id, user["id"]),
+    ).fetchone()
+    if not project:
+        return
+    subscription_id = project["lago_subscription_external_id"] or lago_external_subscription_id(project["id"])
+    event_code = {
+        "vm": "nimbus_vm_created",
+        "volume": "nimbus_volume_created",
+        "network": "nimbus_network_created",
+        "object-storage": "nimbus_bucket_created",
+    }.get(resource_type, "nimbus_resource_created")
+    transaction_id = f"nimbus-resource-{resource_id}-{event_code}"
+    if not lago_is_configured():
+        status, message = "skipped", "LAGO_API_KEY is not configured"
+    else:
+        try:
+            _lago_request(
+                "POST",
+                "events",
+                {
+                    "event": {
+                        "transaction_id": transaction_id,
+                        "code": event_code,
+                        "external_subscription_id": subscription_id,
+                        "properties": {
+                            "resource_id": str(resource_id),
+                            "resource_type": resource_type,
+                            "project_id": str(project_id),
+                        },
+                    }
+                },
+            )
+            status, message = "sent", ""
+        except RuntimeError as error:
+            status, message = "failed", str(error)
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO billing_usage_events
+        (user_id, project_id, resource_id, event_code, transaction_id, status, message)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (user["id"], project_id, resource_id, event_code, transaction_id, status, message),
+    )
+    conn.commit()
+
+
 class NimbusHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=BASE_DIR, **kwargs)
@@ -937,6 +1197,26 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             conn.close()
             self._send_json({"ok": True, "resources": resources})
             return
+        if parsed.path == "/api/billing/status":
+            params = parse_qs(parsed.query)
+            email = (params.get("email") or [""])[0]
+            conn, user, error = self._with_user(email)
+            if error:
+                self._send_json(error, error.get("status", 400))
+                return
+            self.handle_billing_status(conn, user)
+            conn.close()
+            return
+        if parsed.path == "/api/billing/invoices":
+            params = parse_qs(parsed.query)
+            email = (params.get("email") or [""])[0]
+            conn, user, error = self._with_user(email)
+            if error:
+                self._send_json(error, error.get("status", 400))
+                return
+            self.handle_billing_invoices(conn, user)
+            conn.close()
+            return
         if parsed.path == "/api/s3/objects":
             params = parse_qs(parsed.query)
             email = (params.get("email") or [""])[0]
@@ -1018,6 +1298,8 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             "/api/account/status": self.handle_account_status,
             "/api/account/update-profile": self.handle_account_update_profile,
             "/api/account/change-password": self.handle_account_change_password,
+            "/api/billing/sync": self.handle_billing_sync,
+            "/api/billing/portal-url": self.handle_billing_portal_url,
             "/api/2fa/status": self.handle_2fa_status,
             "/api/2fa/setup": self.handle_2fa_setup,
             "/api/2fa/verify": self.handle_2fa_verify,
@@ -1062,7 +1344,8 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             self._send_json({"ok": False, "message": "Email already registered"}, 409)
             return
 
-        user = conn.execute("SELECT id, full_name, email FROM users WHERE id = ?", (user_id,)).fetchone()
+        user = get_user_by_id(conn, user_id)
+        lago_sync_customer(conn, user)
         conn.close()
         self._send_json(
             {
@@ -1622,6 +1905,121 @@ class NimbusHandler(SimpleHTTPRequestHandler):
         conn.close()
         self._send_json({"ok": True, "message": "Password changed"})
 
+    def handle_billing_status(self, conn, user):
+        conn.row_factory = sqlite3.Row
+        projects = conn.execute(
+            """
+            SELECT id, name, is_default, lago_subscription_external_id, lago_subscription_synced_at, lago_last_sync_error
+            FROM projects
+            WHERE user_id = ?
+            ORDER BY id ASC
+            """,
+            (user["id"],),
+        ).fetchall()
+        resource_counts = {
+            row["resource_type"]: row["count"]
+            for row in conn.execute(
+                """
+                SELECT resource_type, COUNT(*) AS count
+                FROM resources
+                WHERE user_id = ?
+                GROUP BY resource_type
+                """,
+                (user["id"],),
+            ).fetchall()
+        }
+        usage_rows = conn.execute(
+            """
+            SELECT event_code, status, COUNT(*) AS count
+            FROM billing_usage_events
+            WHERE user_id = ?
+            GROUP BY event_code, status
+            ORDER BY event_code, status
+            """,
+            (user["id"],),
+        ).fetchall()
+        customer_external_id = user["lago_customer_external_id"] or lago_external_customer_id(user["id"])
+        payload = {
+            "configured": lago_is_configured(),
+            "dashboardUrl": lago_dashboard_url(),
+            "customerExternalId": customer_external_id,
+            "customerSyncedAt": user["lago_customer_synced_at"],
+            "customerSyncError": user["lago_last_sync_error"],
+            "defaultPlanCode": LAGO_DEFAULT_PLAN_CODE,
+            "projects": [
+                {
+                    "id": row["id"],
+                    "name": row["name"],
+                    "isDefault": bool(row["is_default"]),
+                    "subscriptionExternalId": row["lago_subscription_external_id"] or lago_external_subscription_id(row["id"]),
+                    "subscriptionSyncedAt": row["lago_subscription_synced_at"],
+                    "syncError": row["lago_last_sync_error"],
+                }
+                for row in projects
+            ],
+            "resourceCounts": resource_counts,
+            "usageEvents": [
+                {"code": row["event_code"], "status": row["status"], "count": row["count"]}
+                for row in usage_rows
+            ],
+        }
+        self._send_json({"ok": True, "billing": payload})
+
+    def handle_billing_invoices(self, conn, user):
+        external_id = user["lago_customer_external_id"] or lago_external_customer_id(user["id"])
+        if not lago_is_configured():
+            self._send_json({"ok": True, "configured": False, "invoices": [], "message": "Lago API key is not configured"})
+            return
+        try:
+            response = _lago_request("GET", f"customers/{quote(external_id, safe='')}/invoices")
+            invoices = response.get("invoices", [])
+            self._send_json({"ok": True, "configured": True, "invoices": invoices})
+        except RuntimeError as error:
+            self._send_json({"ok": False, "configured": True, "message": str(error)}, 502)
+
+    def handle_billing_sync(self, data: dict):
+        email = data.get("email")
+        conn, user, error = self._with_user(email)
+        if error:
+            self._send_json(error, error.get("status", 400))
+            return
+        ensure_seed_projects(conn, user["id"])
+        customer_result = lago_sync_customer(conn, user)
+        projects = conn.execute(
+            """
+            SELECT id, name, lago_subscription_external_id
+            FROM projects
+            WHERE user_id = ?
+            ORDER BY id ASC
+            """,
+            (user["id"],),
+        ).fetchall()
+        project_results = [lago_sync_project_subscription(conn, user, project) for project in projects]
+        refreshed_user = get_user_by_id(conn, user["id"])
+        self.handle_billing_status(conn, refreshed_user)
+        conn.close()
+
+    def handle_billing_portal_url(self, data: dict):
+        email = data.get("email")
+        conn, user, error = self._with_user(email)
+        if error:
+            self._send_json(error, error.get("status", 400))
+            return
+        sync_result = lago_sync_customer(conn, user)
+        conn.close()
+        if not sync_result.get("ok"):
+            self._send_json(sync_result, 400 if not sync_result.get("configured") else 502)
+            return
+        try:
+            response = _lago_request("GET", f"customers/{quote(sync_result['externalId'], safe='')}/portal_url")
+            portal_url = (response.get("customer") or {}).get("portal_url")
+            if not portal_url:
+                self._send_json({"ok": False, "message": "Lago did not return a portal URL"}, 502)
+                return
+            self._send_json({"ok": True, "portalUrl": portal_url})
+        except RuntimeError as error:
+            self._send_json({"ok": False, "message": str(error)}, 502)
+
     def handle_2fa_status(self, data: dict):
         email = data.get("email")
         conn, user, error = self._with_user(email)
@@ -1707,6 +2105,11 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             self._send_json({"ok": False, "message": "Project already exists"}, 409)
             return
 
+        project = conn.execute(
+            "SELECT id, name, lago_subscription_external_id FROM projects WHERE id = ? AND user_id = ?",
+            (project_id, user["id"]),
+        ).fetchone()
+        lago_sync_project_subscription(conn, user, project)
         state = serialize_projects(conn, user["id"], project_id)
         conn.close()
         self._send_json({"ok": True, "state": state})
@@ -1871,6 +2274,11 @@ class NimbusHandler(SimpleHTTPRequestHandler):
             conn.close()
             self._send_json({"ok": False, "message": "VM with this name already exists in selected project"}, 409)
             return
+        project = conn.execute(
+            "SELECT id, name, lago_subscription_external_id FROM projects WHERE id = ? AND user_id = ?",
+            (project_id, user["id"]),
+        ).fetchone()
+        lago_sync_project_subscription(conn, user, project)
         vms = serialize_vms(conn, user["id"], int(project_id))
         conn.close()
         self._send_json({"ok": True, "vms": vms})
@@ -2047,18 +2455,25 @@ class NimbusHandler(SimpleHTTPRequestHandler):
                 self._send_json({"ok": False, "message": str(s3_error)}, 502)
                 return
         try:
-            conn.execute(
+            resource_id = conn.execute(
                 """
                 INSERT INTO resources (user_id, project_id, resource_type, name, status, region)
                 VALUES (?, ?, ?, ?, 'available', ?)
+                RETURNING id
                 """,
                 (user["id"], project_id, resource_type, name, region),
-            )
+            ).fetchone()[0]
             conn.commit()
         except sqlite3.IntegrityError:
             conn.close()
             self._send_json({"ok": False, "message": "Resource with this name already exists in selected project"}, 409)
             return
+        project = conn.execute(
+            "SELECT id, name, lago_subscription_external_id FROM projects WHERE id = ? AND user_id = ?",
+            (project_id, user["id"]),
+        ).fetchone()
+        lago_sync_project_subscription(conn, user, project)
+        lago_record_resource_event(conn, user, int(project_id), int(resource_id), resource_type)
         resources = serialize_resources(conn, user["id"], int(project_id), resource_type)
         conn.close()
         self._send_json({"ok": True, "resources": resources})
